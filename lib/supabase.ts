@@ -13,6 +13,7 @@ export interface Website {
   title: string;
   description: string;
   url: string;
+  user_id: string;
   created_at: string;
 }
 
@@ -22,6 +23,7 @@ export interface Guide {
   slug: string;
   content: string;
   icon: string;
+  user_id: string;
   created_at: string;
   updated_at: string;
 }
@@ -30,5 +32,9 @@ export interface CourseNote {
   id: string;
   course_code: string;
   notes: string;
+  description: string;
+  file_url: string | null;
+  file_name: string | null;
+  user_id: string;
   updated_at: string;
 }

@@ -23,7 +23,7 @@ export default function GuidesPage() {
 
   useEffect(() => {
     fetchGuides();
-  }, []);
+  }, [user]);
 
   const fetchGuides = async () => {
     const supabase = createClient();
@@ -47,6 +47,7 @@ export default function GuidesPage() {
         slug,
         content: `# ${formData.title}\n\nStart writing your guide here...\n`,
         icon: "default",
+        user_id: user?.id,
       }])
       .select()
       .single();

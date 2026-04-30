@@ -9,6 +9,7 @@ create table if not exists public.websites (
   title text not null,
   description text not null,
   url text not null,
+  user_id uuid references auth.users(id),
   created_at timestamptz default now()
 );
 
@@ -19,21 +20,26 @@ create table if not exists public.guides (
   slug text not null unique,
   content text not null default '',
   icon text default 'default',
+  user_id uuid references auth.users(id),
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
 
--- 3. Course notes table
+-- 3. Course notes table (with description and file support)
 create table if not exists public.course_notes (
   id uuid default gen_random_uuid() primary key,
   course_code text not null unique,
   notes text not null default '',
+  description text not null default '',
+  file_url text,
+  file_name text,
+  user_id uuid references auth.users(id),
   updated_at timestamptz default now()
 );
 
 -- =============================================================
 -- Row Level Security (RLS) Policies
--- Everyone can READ, only authenticated users can WRITE
+-- Everyone can READ, only the owner can WRITE
 -- =============================================================
 
 -- Enable RLS on all tables
@@ -46,36 +52,57 @@ create policy "Anyone can view websites" on public.websites
   for select using (true);
 
 create policy "Authenticated users can insert websites" on public.websites
-  for insert with check (auth.role() = 'authenticated');
+  for insert with check (auth.uid() = user_id);
 
-create policy "Authenticated users can update websites" on public.websites
-  for update using (auth.role() = 'authenticated');
+create policy "Owners can update their websites" on public.websites
+  for update using (auth.uid() = user_id);
 
-create policy "Authenticated users can delete websites" on public.websites
-  for delete using (auth.role() = 'authenticated');
+create policy "Owners can delete their websites" on public.websites
+  for delete using (auth.uid() = user_id);
 
 -- Guides policies
 create policy "Anyone can view guides" on public.guides
   for select using (true);
 
 create policy "Authenticated users can insert guides" on public.guides
-  for insert with check (auth.role() = 'authenticated');
+  for insert with check (auth.uid() = user_id);
 
-create policy "Authenticated users can update guides" on public.guides
-  for update using (auth.role() = 'authenticated');
+create policy "Owners can update their guides" on public.guides
+  for update using (auth.uid() = user_id);
 
-create policy "Authenticated users can delete guides" on public.guides
-  for delete using (auth.role() = 'authenticated');
+create policy "Owners can delete their guides" on public.guides
+  for delete using (auth.uid() = user_id);
 
 -- Course notes policies
 create policy "Anyone can view course notes" on public.course_notes
   for select using (true);
 
 create policy "Authenticated users can insert course notes" on public.course_notes
-  for insert with check (auth.role() = 'authenticated');
+  for insert with check (auth.uid() = user_id);
 
-create policy "Authenticated users can update course notes" on public.course_notes
-  for update using (auth.role() = 'authenticated');
+create policy "Owners can update their course notes" on public.course_notes
+  for update using (auth.uid() = user_id);
 
-create policy "Authenticated users can delete course notes" on public.course_notes
-  for delete using (auth.role() = 'authenticated');
+create policy "Owners can delete their course notes" on public.course_notes
+  for delete using (auth.uid() = user_id);
+
+-- =============================================================
+-- Storage bucket for course files (PDFs, docs, etc.)
+-- =============================================================
+
+insert into storage.buckets (id, name, public)
+values ('course-files', 'course-files', true)
+on conflict (id) do nothing;
+
+-- Storage policies
+create policy "Anyone can view course files" on storage.objects
+  for select using (bucket_id = 'course-files');
+
+create policy "Authenticated users can upload course files" on storage.objects
+  for insert with check (bucket_id = 'course-files' and auth.role() = 'authenticated');
+
+create policy "Authenticated users can update course files" on storage.objects
+  for update using (bucket_id = 'course-files' and auth.role() = 'authenticated');
+
+create policy "Authenticated users can delete course files" on storage.objects
+  for delete using (bucket_id = 'course-files' and auth.role() = 'authenticated');
