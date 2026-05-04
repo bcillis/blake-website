@@ -11,6 +11,7 @@ const navLinks = [
   { href: "/websites", label: "Websites" },
   { href: "/journey", label: "Journey" },
   { href: "/guides", label: "Guides" },
+  { href: "/wishlist", label: "Wishlist" },
 ];
 
 export default function Navbar() {

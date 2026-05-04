@@ -37,6 +37,16 @@ create table if not exists public.course_notes (
   updated_at timestamptz default now()
 );
 
+-- 4. Wishlist table
+create table if not exists public.wishlist (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  price numeric(10, 2) not null default 0,
+  link text not null,
+  user_id uuid references auth.users(id),
+  created_at timestamptz default now()
+);
+
 -- =============================================================
 -- Row Level Security (RLS) Policies
 -- Everyone can READ, only the owner can WRITE
@@ -46,6 +56,7 @@ create table if not exists public.course_notes (
 alter table public.websites enable row level security;
 alter table public.guides enable row level security;
 alter table public.course_notes enable row level security;
+alter table public.wishlist enable row level security;
 
 -- Websites policies
 create policy "Anyone can view websites" on public.websites
@@ -84,6 +95,19 @@ create policy "Owners can update their course notes" on public.course_notes
   for update using (auth.uid() = user_id);
 
 create policy "Owners can delete their course notes" on public.course_notes
+  for delete using (auth.uid() = user_id);
+
+-- Wishlist policies
+create policy "Anyone can view wishlist" on public.wishlist
+  for select using (true);
+
+create policy "Authenticated users can insert wishlist" on public.wishlist
+  for insert with check (auth.uid() = user_id);
+
+create policy "Owners can update their wishlist" on public.wishlist
+  for update using (auth.uid() = user_id);
+
+create policy "Owners can delete their wishlist" on public.wishlist
   for delete using (auth.uid() = user_id);
 
 -- =============================================================

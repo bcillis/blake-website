@@ -38,3 +38,12 @@ export interface CourseNote {
   user_id: string;
   updated_at: string;
 }
+
+export interface WishlistItem {
+  id: string;
+  title: string;
+  price: number;
+  link: string;
+  user_id: string;
+  created_at: string;
+}

@@ -36,6 +36,17 @@ const sections = [
     ),
     color: "from-emerald-500 to-teal-500",
   },
+  {
+    title: "Wishlist",
+    description: "Things I'd love to own one day — gear, gadgets, and the occasional dream purchase.",
+    href: "/wishlist",
+    icon: (
+      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+      </svg>
+    ),
+    color: "from-rose-500 to-amber-500",
+  },
 ];
 
 export default function HomePage() {
@@ -61,7 +72,7 @@ export default function HomePage() {
       </section>
 
       {/* Section cards */}
-      <section className="pb-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="pb-20 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {sections.map((section) => (
           <Link key={section.href} href={section.href} className="group card-interactive p-6">
             <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${section.color} text-white mb-4 group-hover:scale-110 transition-transform`}>
