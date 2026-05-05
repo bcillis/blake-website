@@ -27,6 +27,7 @@ export default function WishlistPage() {
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState({ title: "", price: "", link: "" });
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchItems();
@@ -54,7 +55,11 @@ export default function WishlistPage() {
     e.preventDefault();
     if (!user) return;
     const priceNum = parseFloat(formData.price);
-    if (Number.isNaN(priceNum) || priceNum < 0) return;
+    if (Number.isNaN(priceNum) || priceNum < 0) {
+      setFormError("Please enter a valid price.");
+      return;
+    }
+    setFormError(null);
     setSubmitting(true);
     const supabase = createClient();
     const { data, error } = await supabase
@@ -62,7 +67,9 @@ export default function WishlistPage() {
       .insert([{ title: formData.title, price: priceNum, link: formData.link, user_id: user.id }])
       .select()
       .single();
-    if (!error && data) {
+    if (error) {
+      setFormError(error.message);
+    } else if (data) {
       setItems([data, ...items]);
       setFormData({ title: "", price: "", link: "" });
       setShowForm(false);
@@ -86,7 +93,11 @@ export default function WishlistPage() {
     e.preventDefault();
     if (!editingId) return;
     const priceNum = parseFloat(editData.price);
-    if (Number.isNaN(priceNum) || priceNum < 0) return;
+    if (Number.isNaN(priceNum) || priceNum < 0) {
+      setFormError("Please enter a valid price.");
+      return;
+    }
+    setFormError(null);
     const supabase = createClient();
     const { data, error } = await supabase
       .from("wishlist")
@@ -94,7 +105,9 @@ export default function WishlistPage() {
       .eq("id", editingId)
       .select()
       .single();
-    if (!error && data) {
+    if (error) {
+      setFormError(error.message);
+    } else if (data) {
       setItems(items.map((i) => (i.id === editingId ? data : i)));
       setEditingId(null);
     }
@@ -130,7 +143,10 @@ export default function WishlistPage() {
             {String(filteredItems.length).padStart(2, "0")} items · {formatPrice(totalPrice)}
           </span>
           {user && !showForm && (
-            <button onClick={() => setShowForm(true)} className="btn-primary whitespace-nowrap">
+            <button
+              onClick={() => { setFormError(null); setShowForm(true); }}
+              className="btn-primary whitespace-nowrap"
+            >
               + Add item
             </button>
           )}
@@ -151,9 +167,14 @@ export default function WishlistPage() {
             <input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="input-field" placeholder="Title — e.g. Mechanical keyboard" required />
             <input value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="input-field" placeholder="Price (USD) — 129.99" type="number" step="0.01" min="0" required />
             <input value={formData.link} onChange={(e) => setFormData({ ...formData, link: e.target.value })} className="input-field" placeholder="https://example.com/product" type="url" required />
+            {formError && (
+              <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300 dark:text-red-300">
+                {formError}
+              </div>
+            )}
             <div className="flex gap-2">
               <button type="submit" disabled={submitting} className="btn-primary">{submitting ? "Adding..." : "Add"}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+              <button type="button" onClick={() => { setFormError(null); setShowForm(false); }} className="btn-secondary">Cancel</button>
             </div>
           </motion.form>
         )}
@@ -184,9 +205,14 @@ export default function WishlistPage() {
                   <input value={editData.title} onChange={(e) => setEditData({ ...editData, title: e.target.value })} className="input-field" required />
                   <input value={editData.price} onChange={(e) => setEditData({ ...editData, price: e.target.value })} className="input-field" type="number" step="0.01" min="0" required />
                   <input value={editData.link} onChange={(e) => setEditData({ ...editData, link: e.target.value })} className="input-field" type="url" required />
+                  {formError && (
+                    <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300 dark:text-red-300">
+                      {formError}
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <button type="submit" className="btn-primary">Save</button>
-                    <button type="button" onClick={() => setEditingId(null)} className="btn-secondary">Cancel</button>
+                    <button type="button" onClick={() => { setFormError(null); setEditingId(null); }} className="btn-secondary">Cancel</button>
                   </div>
                 </form>
               ) : (

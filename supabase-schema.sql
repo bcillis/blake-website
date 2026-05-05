@@ -1,6 +1,8 @@
 -- =============================================================
 -- BlakeHub Supabase Schema
--- Run this in your Supabase SQL Editor (Dashboard > SQL Editor)
+-- Safe to re-run: tables use `create if not exists`, policies
+-- are dropped first via `drop policy if exists`.
+-- Run this in your Supabase SQL Editor (Dashboard > SQL Editor).
 -- =============================================================
 
 -- 1. Websites table
@@ -52,61 +54,69 @@ create table if not exists public.wishlist (
 -- Everyone can READ, only the owner can WRITE
 -- =============================================================
 
--- Enable RLS on all tables
-alter table public.websites enable row level security;
-alter table public.guides enable row level security;
-alter table public.course_notes enable row level security;
-alter table public.wishlist enable row level security;
+-- Enable RLS on all tables (no-op if already enabled)
+alter table public.websites      enable row level security;
+alter table public.guides        enable row level security;
+alter table public.course_notes  enable row level security;
+alter table public.wishlist      enable row level security;
 
 -- Websites policies
+drop policy if exists "Anyone can view websites"                  on public.websites;
+drop policy if exists "Authenticated users can insert websites"   on public.websites;
+drop policy if exists "Owners can update their websites"          on public.websites;
+drop policy if exists "Owners can delete their websites"          on public.websites;
+
 create policy "Anyone can view websites" on public.websites
   for select using (true);
-
 create policy "Authenticated users can insert websites" on public.websites
   for insert with check (auth.uid() = user_id);
-
 create policy "Owners can update their websites" on public.websites
   for update using (auth.uid() = user_id);
-
 create policy "Owners can delete their websites" on public.websites
   for delete using (auth.uid() = user_id);
 
 -- Guides policies
+drop policy if exists "Anyone can view guides"                    on public.guides;
+drop policy if exists "Authenticated users can insert guides"     on public.guides;
+drop policy if exists "Owners can update their guides"            on public.guides;
+drop policy if exists "Owners can delete their guides"            on public.guides;
+
 create policy "Anyone can view guides" on public.guides
   for select using (true);
-
 create policy "Authenticated users can insert guides" on public.guides
   for insert with check (auth.uid() = user_id);
-
 create policy "Owners can update their guides" on public.guides
   for update using (auth.uid() = user_id);
-
 create policy "Owners can delete their guides" on public.guides
   for delete using (auth.uid() = user_id);
 
 -- Course notes policies
+drop policy if exists "Anyone can view course notes"              on public.course_notes;
+drop policy if exists "Authenticated users can insert course notes" on public.course_notes;
+drop policy if exists "Owners can update their course notes"      on public.course_notes;
+drop policy if exists "Owners can delete their course notes"      on public.course_notes;
+
 create policy "Anyone can view course notes" on public.course_notes
   for select using (true);
-
 create policy "Authenticated users can insert course notes" on public.course_notes
   for insert with check (auth.uid() = user_id);
-
 create policy "Owners can update their course notes" on public.course_notes
   for update using (auth.uid() = user_id);
-
 create policy "Owners can delete their course notes" on public.course_notes
   for delete using (auth.uid() = user_id);
 
 -- Wishlist policies
+drop policy if exists "Anyone can view wishlist"                  on public.wishlist;
+drop policy if exists "Authenticated users can insert wishlist"   on public.wishlist;
+drop policy if exists "Owners can update their wishlist"          on public.wishlist;
+drop policy if exists "Owners can delete their wishlist"          on public.wishlist;
+
 create policy "Anyone can view wishlist" on public.wishlist
   for select using (true);
-
 create policy "Authenticated users can insert wishlist" on public.wishlist
   for insert with check (auth.uid() = user_id);
-
 create policy "Owners can update their wishlist" on public.wishlist
   for update using (auth.uid() = user_id);
-
 create policy "Owners can delete their wishlist" on public.wishlist
   for delete using (auth.uid() = user_id);
 
@@ -119,14 +129,16 @@ values ('course-files', 'course-files', true)
 on conflict (id) do nothing;
 
 -- Storage policies
+drop policy if exists "Anyone can view course files"                       on storage.objects;
+drop policy if exists "Authenticated users can upload course files"        on storage.objects;
+drop policy if exists "Authenticated users can update course files"        on storage.objects;
+drop policy if exists "Authenticated users can delete course files"        on storage.objects;
+
 create policy "Anyone can view course files" on storage.objects
   for select using (bucket_id = 'course-files');
-
 create policy "Authenticated users can upload course files" on storage.objects
   for insert with check (bucket_id = 'course-files' and auth.role() = 'authenticated');
-
 create policy "Authenticated users can update course files" on storage.objects
   for update using (bucket_id = 'course-files' and auth.role() = 'authenticated');
-
 create policy "Authenticated users can delete course files" on storage.objects
   for delete using (bucket_id = 'course-files' and auth.role() = 'authenticated');
