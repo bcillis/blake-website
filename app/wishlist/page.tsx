@@ -17,10 +17,19 @@ const hostFromUrl = (url: string) => {
   }
 };
 
+type SortKey = "date" | "alpha" | "price";
+
+const sortLabels: Record<SortKey, string> = {
+  date: "Newest first",
+  alpha: "A → Z",
+  price: "Price (high → low)",
+};
+
 export default function WishlistPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("date");
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ title: "", price: "", link: "" });
@@ -45,6 +54,21 @@ export default function WishlistPage() {
     const q = search.toLowerCase();
     return items.filter((i) => i.title.toLowerCase().includes(q) || i.link.toLowerCase().includes(q));
   }, [items, search]);
+
+  const sortedItems = useMemo(() => {
+    const arr = [...filteredItems];
+    switch (sortKey) {
+      case "alpha":
+        return arr.sort((a, b) => a.title.localeCompare(b.title));
+      case "price":
+        return arr.sort((a, b) => Number(b.price) - Number(a.price));
+      case "date":
+      default:
+        return arr.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+    }
+  }, [filteredItems, sortKey]);
 
   const totalPrice = useMemo(
     () => filteredItems.reduce((sum, i) => sum + Number(i.price || 0), 0),
@@ -139,6 +163,18 @@ export default function WishlistPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="input-field sm:flex-1"
           />
+          <select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+            aria-label="Sort by"
+            className="input-field sm:w-[200px] cursor-pointer pr-8"
+          >
+            {(Object.keys(sortLabels) as SortKey[]).map((key) => (
+              <option key={key} value={key}>
+                Sort: {sortLabels[key]}
+              </option>
+            ))}
+          </select>
           <span className="text-xs uppercase tracking-wider text-[var(--text-muted)] whitespace-nowrap sm:px-2">
             {String(filteredItems.length).padStart(2, "0")} items · {formatPrice(totalPrice)}
           </span>
@@ -190,7 +226,7 @@ export default function WishlistPage() {
             </div>
           ))}
         </div>
-      ) : filteredItems.length === 0 ? (
+      ) : sortedItems.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-[var(--text-secondary)]">
             {search ? "No matches." : "Wishlist is empty."}
@@ -198,7 +234,7 @@ export default function WishlistPage() {
         </div>
       ) : (
         <StaggerGrid className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredItems.map((item) => (
+          {sortedItems.map((item) => (
             <StaggerCard key={item.id} className="h-full">
               {editingId === item.id ? (
                 <form onSubmit={handleEdit} className="card space-y-3">

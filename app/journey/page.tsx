@@ -23,7 +23,7 @@ interface NoteData {
 
 export default function JourneyPage() {
   const { user } = useAuth();
-  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set([1, 2, 3, 4]));
+  const [expandedYears, setExpandedYears] = useState<Set<number>>(new Set());
   const [notes, setNotes] = useState<Record<string, NoteData>>({});
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
@@ -31,6 +31,7 @@ export default function JourneyPage() {
   const [filterTopic, setFilterTopic] = useState<string | null>(null);
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [showAllTopics, setShowAllTopics] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -181,23 +182,40 @@ export default function JourneyPage() {
           <div className="text-xs uppercase tracking-wider text-[var(--text-muted)] mb-3">
             Filter by topic
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilterTopic(null)}
-              className={`chip chip-button ${!filterTopic ? "chip-active" : ""}`}
-            >
-              All
-            </button>
-            {Array.from(allTopics).sort().map((topic) => (
-              <button
-                key={topic}
-                onClick={() => setFilterTopic(filterTopic === topic ? null : topic)}
-                className={`chip chip-button ${filterTopic === topic ? "chip-active" : ""}`}
-              >
-                {topic}
-              </button>
-            ))}
-          </div>
+          {(() => {
+            const TOPIC_PREVIEW = 4; // 4 topics + "All" chip = 5 visible
+            const sortedTopics = Array.from(allTopics).sort();
+            const visibleTopics = showAllTopics ? sortedTopics : sortedTopics.slice(0, TOPIC_PREVIEW);
+            const hasMore = sortedTopics.length > TOPIC_PREVIEW;
+            return (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setFilterTopic(null)}
+                  className={`chip chip-button ${!filterTopic ? "chip-active" : ""}`}
+                >
+                  All
+                </button>
+                {visibleTopics.map((topic) => (
+                  <button
+                    key={topic}
+                    onClick={() => setFilterTopic(filterTopic === topic ? null : topic)}
+                    className={`chip chip-button ${filterTopic === topic ? "chip-active" : ""}`}
+                  >
+                    {topic}
+                  </button>
+                ))}
+                {hasMore && (
+                  <button
+                    onClick={() => setShowAllTopics(!showAllTopics)}
+                    className="chip chip-button"
+                    aria-expanded={showAllTopics}
+                  >
+                    {showAllTopics ? "Show less" : `Show more (+${sortedTopics.length - TOPIC_PREVIEW})`}
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </FadeUp>
 
