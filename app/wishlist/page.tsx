@@ -7,7 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { FadeUp, StaggerGrid, StaggerCard } from "@/components/Motion";
 
 const formatPrice = (price: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(price);
+  new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(price);
 
 const hostFromUrl = (url: string) => {
   try {
@@ -200,8 +200,8 @@ export default function WishlistPage() {
             className="card mb-8 space-y-3 overflow-hidden"
           >
             <div className="text-xs uppercase tracking-wider text-[var(--text-muted)]">New item</div>
-            <input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="input-field" placeholder="Title — e.g. Mechanical keyboard" required />
-            <input value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="input-field" placeholder="Price (USD) — 129.99" type="number" step="0.01" min="0" required />
+            <input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="input-field" placeholder="Title" required />
+            <input value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="input-field" placeholder="Price (CAD)" type="number" step="0.01" min="0" required />
             <input value={formData.link} onChange={(e) => setFormData({ ...formData, link: e.target.value })} className="input-field" placeholder="https://example.com/product" type="url" required />
             {formError && (
               <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300 dark:text-red-300">
@@ -262,15 +262,11 @@ export default function WishlistPage() {
                     <h3 className="font-serif text-lg text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors leading-tight">
                       {item.title}
                     </h3>
-                    <span className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5">
-                      ↗
-                    </span>
                   </div>
                   <div className="font-serif text-3xl text-[var(--accent)] mb-3 tabular-nums">
                     {formatPrice(Number(item.price))}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="chip">{hostFromUrl(item.link)}</span>
+                  <div className="flex items-center justify-center">
                     {user && (
                       <div className="flex items-center gap-1">
                         <button
