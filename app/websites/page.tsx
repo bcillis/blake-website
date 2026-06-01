@@ -141,8 +141,8 @@ export default function WebsitesPage() {
             className="card mb-8 space-y-3 overflow-hidden"
           >
             <div className="text-xs uppercase tracking-wider text-[var(--text-muted)]">New entry</div>
-            <input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="input-field" placeholder="Title — e.g. DevDocs" required />
-            <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="textarea-field" placeholder="Why is it useful?" rows={3} required />
+            <input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="input-field" placeholder="Title" required />
+            <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="textarea-field" placeholder="Description" rows={3} required />
             <input value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} className="input-field" placeholder="https://devdocs.io" type="url" required />
             <div className="flex gap-2">
               <button type="submit" disabled={submitting} className="btn-primary">{submitting ? "Adding..." : "Add"}</button>
@@ -193,15 +193,11 @@ export default function WebsitesPage() {
                     <h3 className="font-serif text-xl text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors leading-tight">
                       {website.title}
                     </h3>
-                    <span className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5">
-                      ↗
-                    </span>
                   </div>
                   <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">
                     {website.description}
                   </p>
-                  <div className="flex items-center justify-between">
-                    <span className="chip">{hostFromUrl(website.url)}</span>
+                  <div className="flex items-center justify-center">
                     {user && (
                       <div className="flex items-center gap-1">
                         <button
