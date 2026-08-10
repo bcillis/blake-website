@@ -176,16 +176,14 @@ html:not(.dark) {
     border-bottom: 1px solid var(--rule);
     transition: background-color 140ms ease;
   }
+  /* Hover tint bleeds a little into the gutter; the rules stay aligned to
+     the text column so the index keeps a clean left edge. */
+  .index-row {
+    margin-inline: -0.75rem;
+    padding-inline: 0.75rem;
+  }
   .index-row:hover {
     background: var(--accent-wash);
-  }
-  /* Bleed the hover tint into the gutter so rows read full-width. */
-  .index-row::before {
-    content: "";
-    position: absolute;
-    inset: 0 -1rem;
-    z-index: -1;
-    background: inherit;
   }
 
   .row-title {
