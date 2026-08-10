@@ -310,14 +310,24 @@ Direction: editorial minimalism with industrial precision. Warm neutrals, a sing
 
 `/guides/[slug]` remains the heaviest route: that's `react-markdown` + `remark-gfm` doing real work, correctly code-split to the one route that needs it.
 
+## Supabase — applied and verified 2026-08-10
+
+The schema was run against `bcillis-website` (`lamefzddvcefmcinybxn`) and confirmed by querying `pg_policies` directly:
+
+- Storage insert/update/delete on `course-files` now carry
+  `((bucket_id = 'course-files') AND ((storage.foldername(name))[1] = (auth.uid())::text))`.
+  The three old `"Authenticated users can …"` policies are gone — important, because permissive policies are OR-ed, so leaving them would have silently nullified the restriction.
+- All four `public` update policies (`websites`, `guides`, `course_notes`, `wishlist`) now have `with_check`.
+- Security advisors are down to the eight `pg_graphql_*_table_exposed` warnings, which are expected and correct for a public-read site.
+
+**`auth_leaked_password_protection` remains disabled — the setting is Pro-plan only, so it stays open by plan limitation, not oversight.** Practical mitigation: there is one account and no public signup, RLS is what actually guards the data, and a long generated password from a password manager is stronger than the HaveIBeenPwned check this would have added.
+
 ## Still outstanding — yours, not mine
 
-1. **Run `supabase-schema.sql`** in the SQL Editor (storage path scoping + `with check`). Still not applied to the live database.
-2. **Enable leaked-password protection** in Dashboard → Authentication → Policies.
-3. **The guide titled "A"** whose body is the scaffold string. A numbered contents list makes it the whole Guides section. Write it or delete the row.
-4. **Seven thin website descriptions** ("More Components" ×2, "React components", …). The index gives descriptions more prominence than the card grid did.
-5. **Two `TODO(blake)` markers** — a contact address on `/privacy`, a content licence on `/terms`.
-6. **`next@16`** — the two remaining HIGH advisories both live inside `next` and need a two-major jump plus React 19. Deliberately kept separate from this work.
+1. **The guide titled "A"** whose body is the scaffold string. A numbered contents list makes it the whole Guides section. Write it or delete the row.
+2. **Seven thin website descriptions** ("More Components" ×2, "React components", …). The index gives descriptions more prominence than the card grid did.
+3. **Two `TODO(blake)` markers** — a contact address on `/privacy`, a content licence on `/terms`.
+4. **`next@16`** — the two remaining HIGH advisories both live inside `next` and need a two-major jump plus React 19. Deliberately kept separate from this work.
 
 ---
 
