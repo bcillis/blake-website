@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { journeyData } from "@/data/journey";
 import { createClient, CourseNote } from "@/lib/supabase";
@@ -32,7 +32,6 @@ export default function JourneyPage() {
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [showAllTopics, setShowAllTopics] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchNotes();
@@ -290,59 +289,78 @@ export default function JourneyPage() {
                                     key={course.code}
                                     className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 overflow-hidden transition-colors hover:border-[var(--accent)]/50"
                                   >
-                                    <button
-                                      onClick={() => toggleCourse(course.code)}
-                                      className="w-full p-4 text-left"
-                                    >
-                                      <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                                        <code className="font-mono text-xs text-[var(--accent)] bg-[var(--accent-soft)] px-2 py-1 rounded-md whitespace-nowrap self-start">
-                                          {course.code}
-                                        </code>
-                                        <div className="flex-1 min-w-0">
-                                          <div className="flex items-center gap-2">
-                                            <h4 className="text-sm font-medium text-[var(--text-primary)]">
-                                              {course.name}
-                                            </h4>
-                                            {hasContent && (
-                                              <span
-                                                className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent)]"
-                                                title="Has notes/files"
-                                              />
-                                            )}
-                                            <motion.svg
-                                              animate={{ rotate: isExpanded ? 180 : 0 }}
-                                              transition={{ duration: 0.2 }}
-                                              className="w-4 h-4 ml-auto text-[var(--text-muted)]"
-                                              viewBox="0 0 24 24"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              strokeWidth="2"
-                                            >
-                                              <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
-                                            </motion.svg>
+                                    {/*
+                                      Topic chips are real buttons and must not
+                                      be nested inside the disclosure button —
+                                      they sit alongside it instead.
+                                    */}
+                                    <div className="p-4">
+                                      <button
+                                        onClick={() => toggleCourse(course.code)}
+                                        aria-expanded={isExpanded}
+                                        aria-controls={`course-body-${course.code}`}
+                                        className="w-full text-left"
+                                      >
+                                        <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                                          <code className="font-mono text-xs text-[var(--accent)] bg-[var(--accent-soft)] px-2 py-1 rounded-md whitespace-nowrap self-start">
+                                            {course.code}
+                                          </code>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                              <h4 className="text-sm font-medium text-[var(--text-primary)]">
+                                                {course.name}
+                                              </h4>
+                                              {hasContent && (
+                                                <span
+                                                  className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent)]"
+                                                  role="img"
+                                                  aria-label="Has notes or files"
+                                                />
+                                              )}
+                                              <motion.svg
+                                                aria-hidden="true"
+                                                animate={{ rotate: isExpanded ? 180 : 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                className="w-4 h-4 ml-auto text-[var(--text-muted)]"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                              >
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+                                              </motion.svg>
+                                            </div>
                                           </div>
-                                          <div className="flex flex-wrap gap-1.5 mt-2">
-                                            {course.topics.map((topic) => (
-                                              <span
-                                                key={topic}
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setFilterTopic(filterTopic === topic ? null : topic);
-                                                }}
+                                        </div>
+                                      </button>
+
+                                      {course.topics.length > 0 && (
+                                        <ul className="flex flex-wrap gap-1.5 mt-2">
+                                          {course.topics.map((topic) => (
+                                            <li key={topic}>
+                                              <button
+                                                onClick={() =>
+                                                  setFilterTopic(filterTopic === topic ? null : topic)
+                                                }
+                                                aria-pressed={filterTopic === topic}
                                                 className={`chip chip-button text-[0.68rem] ${filterTopic === topic ? "chip-active" : ""}`}
                                               >
                                                 {topic}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </button>
+                                                <span className="sr-only">
+                                                  {filterTopic === topic ? " (filter active)" : " — filter by this topic"}
+                                                </span>
+                                              </button>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
 
                                     <AnimatePresence initial={false}>
                                       {isExpanded && (
                                         <motion.div
                                           key="course-body"
+                                          id={`course-body-${course.code}`}
                                           initial={{ height: 0, opacity: 0 }}
                                           animate={{ height: "auto", opacity: 1 }}
                                           exit={{ height: 0, opacity: 0 }}
@@ -443,24 +461,33 @@ export default function JourneyPage() {
                                                       {noteData?.description || noteData?.notes ? "Edit notes" : "Add notes"}
                                                     </button>
 
+                                                    {/*
+                                                      A <label> bound to its own
+                                                      input, rather than one
+                                                      shared ref clicked
+                                                      programmatically — the ref
+                                                      pointed at whichever course
+                                                      rendered last.
+                                                    */}
+                                                    <label
+                                                      htmlFor={`file-${course.code}`}
+                                                      className={`btn-ghost text-xs cursor-pointer ${uploading ? "opacity-60 pointer-events-none" : ""}`}
+                                                    >
+                                                      {uploading ? "Uploading..." : noteData?.file_url ? "Replace file" : "Upload file"}
+                                                      <span className="sr-only"> for {course.code}</span>
+                                                    </label>
                                                     <input
-                                                      ref={fileInputRef}
+                                                      id={`file-${course.code}`}
                                                       type="file"
                                                       accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg"
-                                                      className="hidden"
+                                                      className="sr-only"
+                                                      disabled={uploading}
                                                       onChange={(e) => {
                                                         const file = e.target.files?.[0];
                                                         if (file) handleFileUpload(course.code, file);
                                                         e.target.value = "";
                                                       }}
                                                     />
-                                                    <button
-                                                      onClick={() => fileInputRef.current?.click()}
-                                                      disabled={uploading}
-                                                      className="btn-ghost text-xs"
-                                                    >
-                                                      {uploading ? "Uploading..." : noteData?.file_url ? "Replace file" : "Upload file"}
-                                                    </button>
                                                   </div>
                                                 )}
                                               </>

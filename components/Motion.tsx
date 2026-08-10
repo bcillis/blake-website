@@ -1,78 +1,45 @@
 "use client";
 
-import { motion, type HTMLMotionProps } from "framer-motion";
 import { ReactNode } from "react";
 
-const ease = [0.22, 1, 0.36, 1] as const;
+/**
+ * Entrance animations, CSS-driven.
+ *
+ * These used to be Framer Motion components with `initial={{ opacity: 0 }}`.
+ * That state is serialized into the prerendered HTML as `style="opacity:0"`,
+ * so every wrapped element was invisible to anything that doesn't execute JS,
+ * and invisible to everyone until hydration finished. A CSS keyframe starting
+ * at opacity 0 has neither problem: the markup ships visible, and the animation
+ * runs off the stylesheet. Under `prefers-reduced-motion` the global rule in
+ * globals.css collapses the duration, landing straight on the end state.
+ */
 
-interface FadeUpProps extends HTMLMotionProps<"div"> {
+interface FadeUpProps {
   delay?: number;
   children: ReactNode;
+  className?: string;
 }
 
-export function FadeUp({ delay = 0, children, ...rest }: FadeUpProps) {
+export function FadeUp({ delay = 0, children, className }: FadeUpProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease, delay }}
-      {...rest}
+    <div
+      className={`fade-up${className ? ` ${className}` : ""}`}
+      style={delay ? { animationDelay: `${delay}s` } : undefined}
     >
       {children}
-    </motion.div>
+    </div>
   );
 }
 
-export function StaggerList({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <motion.ul
-      className={className}
-      initial="hidden"
-      animate="visible"
-      variants={{
-        hidden: {},
-        visible: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
-      }}
-    >
-      {children}
-    </motion.ul>
-  );
-}
-
-export function StaggerItem({
+/** Container whose direct children stagger in — see `.stagger` in globals.css. */
+export function StaggerGrid({
   children,
   className,
 }: {
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <motion.li
-      className={className}
-      variants={{
-        hidden: { opacity: 0, y: 14 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease } },
-      }}
-    >
-      {children}
-    </motion.li>
-  );
-}
-
-export function StaggerGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <motion.div
-      className={className}
-      initial="hidden"
-      animate="visible"
-      variants={{
-        hidden: {},
-        visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
-      }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className={`stagger${className ? ` ${className}` : ""}`}>{children}</div>;
 }
 
 export function StaggerCard({
@@ -82,15 +49,5 @@ export function StaggerCard({
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <motion.div
-      className={className}
-      variants={{
-        hidden: { opacity: 0, y: 16 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease } },
-      }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className={className}>{children}</div>;
 }

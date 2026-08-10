@@ -6,19 +6,12 @@ import { createClient, Website } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { FadeUp, StaggerGrid, StaggerCard } from "@/components/Motion";
 
-const hostFromUrl = (url: string) => {
-  try {
-    return new URL(url).host.replace(/^www\./, "");
-  } catch {
-    return url.replace(/^https?:\/\//, "").replace(/^www\./, "");
-  }
-};
-
 export default function WebsitesPage() {
   const { user } = useAuth();
   const [websites, setWebsites] = useState<Website[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ title: "", description: "", url: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -68,7 +61,12 @@ export default function WebsitesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this website?")) return;
     const supabase = createClient();
-    await supabase.from("websites").delete().eq("id", id);
+    const { error } = await supabase.from("websites").delete().eq("id", id);
+    if (error) {
+      setActionError(`Couldn't delete: ${error.message}`);
+      return;
+    }
+    setActionError(null);
     setWebsites(websites.filter((w) => w.id !== id));
   };
 
@@ -87,7 +85,12 @@ export default function WebsitesPage() {
       .eq("id", editingId)
       .select()
       .single();
-    if (!error && data) {
+    if (error) {
+      setActionError(`Couldn't save: ${error.message}`);
+      return;
+    }
+    if (data) {
+      setActionError(null);
       setWebsites(websites.map((w) => (w.id === editingId ? data : w)));
       setEditingId(null);
     }
@@ -152,9 +155,18 @@ export default function WebsitesPage() {
         )}
       </AnimatePresence>
 
+      {actionError && (
+        <div
+          role="alert"
+          className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+        >
+          {actionError}
+        </div>
+      )}
+
       {loading ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="card">
               <div className="h-5 skeleton w-1/2 mb-3" />
               <div className="h-3 skeleton w-full mb-2" />
@@ -183,39 +195,33 @@ export default function WebsitesPage() {
                   </div>
                 </form>
               ) : (
-                <a
-                  href={website.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="card-interactive group block h-full"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3 className="font-serif text-xl text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors leading-tight">
+                <article className="card-interactive card-stretch group flex h-full flex-col">
+                  <h3 className="font-serif text-xl text-[var(--text-primary)] transition-colors leading-tight mb-2">
+                    <a
+                      href={website.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="stretched-link group-hover:text-[var(--accent)] transition-colors"
+                    >
                       {website.title}
-                    </h3>
-                  </div>
-                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">
+                    </a>
+                  </h3>
+                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
                     {website.description}
                   </p>
-                  <div className="flex items-center justify-center">
-                    {user && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEdit(website); }}
-                          className="btn-ghost text-xs"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(website.id); }}
-                          className="btn-ghost text-xs"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </a>
+                  {user && (
+                    <div className="card-actions mt-4 flex items-center gap-1">
+                      <button onClick={() => startEdit(website)} className="btn-ghost text-xs">
+                        Edit
+                        <span className="sr-only"> {website.title}</span>
+                      </button>
+                      <button onClick={() => handleDelete(website.id)} className="btn-ghost text-xs">
+                        Delete
+                        <span className="sr-only"> {website.title}</span>
+                      </button>
+                    </div>
+                  )}
+                </article>
               )}
             </StaggerCard>
           ))}

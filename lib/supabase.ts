@@ -22,7 +22,6 @@ export interface Guide {
   title: string;
   slug: string;
   content: string;
-  icon: string;
   user_id: string;
   created_at: string;
   updated_at: string;

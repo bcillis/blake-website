@@ -21,6 +21,9 @@ create table if not exists public.guides (
   title text not null,
   slug text not null unique,
   content text not null default '',
+  -- Deprecated: written as 'default' on every row, never read. Kept so this
+  -- file stays safe to re-run against the existing table; drop it with
+  -- `alter table public.guides drop column icon;` when convenient.
   icon text default 'default',
   user_id uuid references auth.users(id),
   created_at timestamptz default now(),
@@ -71,7 +74,8 @@ create policy "Anyone can view websites" on public.websites
 create policy "Authenticated users can insert websites" on public.websites
   for insert with check (auth.uid() = user_id);
 create policy "Owners can update their websites" on public.websites
-  for update using (auth.uid() = user_id);
+  for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 create policy "Owners can delete their websites" on public.websites
   for delete using (auth.uid() = user_id);
 
@@ -86,7 +90,8 @@ create policy "Anyone can view guides" on public.guides
 create policy "Authenticated users can insert guides" on public.guides
   for insert with check (auth.uid() = user_id);
 create policy "Owners can update their guides" on public.guides
-  for update using (auth.uid() = user_id);
+  for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 create policy "Owners can delete their guides" on public.guides
   for delete using (auth.uid() = user_id);
 
@@ -101,7 +106,8 @@ create policy "Anyone can view course notes" on public.course_notes
 create policy "Authenticated users can insert course notes" on public.course_notes
   for insert with check (auth.uid() = user_id);
 create policy "Owners can update their course notes" on public.course_notes
-  for update using (auth.uid() = user_id);
+  for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 create policy "Owners can delete their course notes" on public.course_notes
   for delete using (auth.uid() = user_id);
 
@@ -116,7 +122,8 @@ create policy "Anyone can view wishlist" on public.wishlist
 create policy "Authenticated users can insert wishlist" on public.wishlist
   for insert with check (auth.uid() = user_id);
 create policy "Owners can update their wishlist" on public.wishlist
-  for update using (auth.uid() = user_id);
+  for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 create policy "Owners can delete their wishlist" on public.wishlist
   for delete using (auth.uid() = user_id);
 
@@ -130,15 +137,38 @@ on conflict (id) do nothing;
 
 -- Storage policies
 drop policy if exists "Anyone can view course files"                       on storage.objects;
+-- Superseded by the owner-scoped policies below. These must still be dropped by
+-- their original names, or re-running this file would leave the old permissive
+-- rules active alongside the new ones.
 drop policy if exists "Authenticated users can upload course files"        on storage.objects;
 drop policy if exists "Authenticated users can update course files"        on storage.objects;
 drop policy if exists "Authenticated users can delete course files"        on storage.objects;
+drop policy if exists "Owners can upload course files"                     on storage.objects;
+drop policy if exists "Owners can update course files"                     on storage.objects;
+drop policy if exists "Owners can delete course files"                     on storage.objects;
 
+-- Writes are scoped to the uploader's own folder. The app uploads to
+-- `{user.id}/{course_code}/{filename}` (see app/journey/page.tsx), so the first
+-- path segment must equal the caller's uid — otherwise any authenticated user
+-- could overwrite or delete anyone else's files.
 create policy "Anyone can view course files" on storage.objects
   for select using (bucket_id = 'course-files');
-create policy "Authenticated users can upload course files" on storage.objects
-  for insert with check (bucket_id = 'course-files' and auth.role() = 'authenticated');
-create policy "Authenticated users can update course files" on storage.objects
-  for update using (bucket_id = 'course-files' and auth.role() = 'authenticated');
-create policy "Authenticated users can delete course files" on storage.objects
-  for delete using (bucket_id = 'course-files' and auth.role() = 'authenticated');
+create policy "Owners can upload course files" on storage.objects
+  for insert with check (
+    bucket_id = 'course-files'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+create policy "Owners can update course files" on storage.objects
+  for update using (
+    bucket_id = 'course-files'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  )
+  with check (
+    bucket_id = 'course-files'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+create policy "Owners can delete course files" on storage.objects
+  for delete using (
+    bucket_id = 'course-files'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );

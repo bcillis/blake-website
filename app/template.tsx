@@ -1,16 +1,17 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { ReactNode } from "react";
 
+/**
+ * Page transition.
+ *
+ * Deliberately CSS-only: a Framer Motion `initial={{ opacity: 0 }}` here gets
+ * serialized into the prerendered HTML as `style="opacity:0"`, which hides the
+ * entire page from anything that doesn't run JS (and delays LCP for everyone
+ * else). The `page-enter` animation in globals.css starts from opacity 0 too,
+ * but only ever applies once the stylesheet has loaded and animations run —
+ * so the served markup stays visible.
+ */
 export default function Template({ children }: { children: ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className="page-enter">{children}</div>;
 }

@@ -40,17 +40,12 @@ const config: Config = {
         page: "1080px",
       },
       keyframes: {
-        "fade-up": {
-          "0%": { opacity: "0", transform: "translateY(8px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
-        },
         shimmer: {
           "0%": { backgroundPosition: "-400px 0" },
           "100%": { backgroundPosition: "400px 0" },
         },
       },
       animation: {
-        "fade-up": "fade-up 400ms cubic-bezier(0.22, 1, 0.36, 1) both",
         shimmer: "shimmer 1.4s linear infinite",
       },
     },

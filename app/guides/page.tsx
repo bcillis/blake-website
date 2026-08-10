@@ -8,6 +8,13 @@ import { createClient, Guide } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { FadeUp, StaggerGrid, StaggerCard } from "@/components/Motion";
 
+/** Lowercase, URL-safe slug. Lookups use `.eq("slug", …)`, which is case-sensitive. */
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
 const previewLine = (content: string) => {
   const lines = content.split("\n").filter((l) => l.trim() && !l.trim().startsWith("#"));
   const first = lines[0] ?? "";
@@ -23,6 +30,7 @@ export default function GuidesPage() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ title: "", slug: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGuides();
@@ -38,31 +46,40 @@ export default function GuidesPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    const slug = formData.slug || formData.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    // Slugs are matched case-sensitively on lookup, so normalise on the way in.
+    const slug = slugify(formData.slug || formData.title);
     const supabase = createClient();
     const { data, error } = await supabase
       .from("guides")
       .insert([{
         title: formData.title,
         slug,
-        content: `# ${formData.title}\n\nStart writing your guide here...\n`,
-        icon: "default",
+        content: `# ${formData.title}\n\n`,
         user_id: user?.id,
       }])
       .select()
       .single();
-    if (!error && data) {
+    if (error) {
+      setActionError(`Couldn't create the guide: ${error.message}`);
+      setSubmitting(false);
+      return;
+    }
+    if (data) {
+      setActionError(null);
       router.push(`/guides/${data.slug}`);
     }
     setSubmitting(false);
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDelete = async (id: string) => {
     if (!confirm("Delete this guide?")) return;
     const supabase = createClient();
-    await supabase.from("guides").delete().eq("id", id);
+    const { error } = await supabase.from("guides").delete().eq("id", id);
+    if (error) {
+      setActionError(`Couldn't delete: ${error.message}`);
+      return;
+    }
+    setActionError(null);
     setGuides(guides.filter((g) => g.id !== id));
   };
 
@@ -132,8 +149,17 @@ export default function GuidesPage() {
         )}
       </AnimatePresence>
 
+      {actionError && (
+        <div
+          role="alert"
+          className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+        >
+          {actionError}
+        </div>
+      )}
+
       {loading ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
           {[1, 2, 3].map((i) => (
             <div key={i} className="card">
               <div className="h-5 skeleton w-1/2 mb-3" />
@@ -149,40 +175,50 @@ export default function GuidesPage() {
         <StaggerGrid className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {guides.map((guide) => (
             <StaggerCard key={guide.id} className="h-full">
-              <Link href={`/guides/${guide.slug}`} className="card-interactive group block h-full relative">
+              <article className="card-interactive card-stretch group flex h-full flex-col">
                 <div className="flex items-center gap-2 mb-4">
                   <span
+                    aria-hidden="true"
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm"
                     style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
                   >
                     §
                   </span>
-                  <span className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
+                  {/* Not uppercased: slugs are lowercase and case-sensitive in the URL. */}
+                  <span className="font-mono text-xs text-[var(--text-muted)]">
                     /{guide.slug}
                   </span>
                 </div>
-                <h3 className="font-serif text-xl text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors mb-2 leading-tight">
-                  {guide.title}
+                <h3 className="font-serif text-xl text-[var(--text-primary)] mb-2 leading-tight">
+                  <Link
+                    href={`/guides/${guide.slug}`}
+                    className="stretched-link group-hover:text-[var(--accent)] transition-colors"
+                  >
+                    {guide.title}
+                  </Link>
                 </h3>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">
                   {previewLine(guide.content)}
                 </p>
-                <span className="inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] group-hover:gap-2 transition-all">
+                <span
+                  aria-hidden="true"
+                  className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] group-hover:gap-2 transition-all"
+                >
                   Read guide <span>→</span>
                 </span>
 
                 {user && (
                   <button
-                    onClick={(e) => handleDelete(guide.id, e)}
-                    aria-label="Delete guide"
-                    className="absolute top-3 right-3 p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] opacity-0 group-hover:opacity-100 transition-all"
+                    onClick={() => handleDelete(guide.id)}
+                    className="card-actions absolute top-3 right-3 p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
                   >
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg aria-hidden="true" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
                     </svg>
+                    <span className="sr-only">Delete {guide.title}</span>
                   </button>
                 )}
-              </Link>
+              </article>
             </StaggerCard>
           ))}
         </StaggerGrid>

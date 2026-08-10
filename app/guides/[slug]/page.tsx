@@ -23,15 +23,24 @@ export default function GuidePage() {
   const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    const fetchGuide = async () => {
+      const supabase = createClient();
+      // Slugs are stored lowercase; normalise so /guides/Git resolves like /guides/git.
+      const { data } = await supabase
+        .from("guides")
+        .select("*")
+        .eq("slug", slug.toLowerCase())
+        .maybeSingle();
+      if (cancelled) return;
+      setGuide(data);
+      setLoading(false);
+    };
     fetchGuide();
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
-
-  const fetchGuide = async () => {
-    const supabase = createClient();
-    const { data } = await supabase.from("guides").select("*").eq("slug", slug).single();
-    setGuide(data);
-    setLoading(false);
-  };
 
   const startEditing = () => {
     if (!guide) return;

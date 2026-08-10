@@ -17,7 +17,7 @@ const navLinks = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -29,10 +29,8 @@ export default function Navbar() {
   }, []);
 
   return (
-    <motion.nav
-      initial={{ y: -16, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+    <nav
+      aria-label="Main"
       className={`sticky top-0 z-50 transition-colors duration-200 ${
         scrolled
           ? "bg-[var(--bg)]/85 backdrop-blur-md border-b border-[var(--border)]"
@@ -85,7 +83,13 @@ export default function Navbar() {
             })}
             <span className="mx-2 h-5 w-px bg-[var(--border)]" />
             <ThemeToggle />
-            {user ? (
+            {/* Reserve the slot while auth resolves so the label doesn't flip
+                from "Sign in" to "Sign out" a beat after load. */}
+            {loading ? (
+              <span className="btn-ghost ml-1 opacity-0" aria-hidden="true">
+                Sign in
+              </span>
+            ) : user ? (
               <button onClick={signOut} className="btn-ghost ml-1">
                 Sign out
               </button>
@@ -143,7 +147,7 @@ export default function Navbar() {
                     </Link>
                   );
                 })}
-                {user ? (
+                {loading ? null : user ? (
                   <button
                     onClick={() => { signOut(); setMobileOpen(false); }}
                     className="px-3 py-2 rounded-lg text-sm text-left text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors"
@@ -164,6 +168,6 @@ export default function Navbar() {
           )}
         </AnimatePresence>
       </div>
-    </motion.nav>
+    </nav>
   );
 }

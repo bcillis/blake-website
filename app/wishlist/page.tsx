@@ -9,14 +9,6 @@ import { FadeUp, StaggerGrid, StaggerCard } from "@/components/Motion";
 const formatPrice = (price: number) =>
   new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(price);
 
-const hostFromUrl = (url: string) => {
-  try {
-    return new URL(url).host.replace(/^www\./, "");
-  } catch {
-    return url.replace(/^https?:\/\//, "").replace(/^www\./, "");
-  }
-};
-
 type SortKey = "date" | "alpha" | "price";
 
 const sortLabels: Record<SortKey, string> = {
@@ -104,7 +96,12 @@ export default function WishlistPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this wishlist item?")) return;
     const supabase = createClient();
-    await supabase.from("wishlist").delete().eq("id", id);
+    const { error } = await supabase.from("wishlist").delete().eq("id", id);
+    if (error) {
+      setFormError(`Couldn't delete: ${error.message}`);
+      return;
+    }
+    setFormError(null);
     setItems(items.filter((i) => i.id !== id));
   };
 
@@ -216,9 +213,19 @@ export default function WishlistPage() {
         )}
       </AnimatePresence>
 
+      {/* Delete failures happen with no form open, so they need their own slot */}
+      {formError && !showForm && !editingId && (
+        <div
+          role="alert"
+          className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+        >
+          {formError}
+        </div>
+      )}
+
       {loading ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="card">
               <div className="h-5 skeleton w-2/3 mb-3" />
               <div className="h-6 skeleton w-1/3 mb-2" />
@@ -252,39 +259,33 @@ export default function WishlistPage() {
                   </div>
                 </form>
               ) : (
-                <a
-                  href={item.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="card-interactive group block h-full"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <h3 className="font-serif text-lg text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors leading-tight">
+                <article className="card-interactive card-stretch group flex h-full flex-col">
+                  <h3 className="font-serif text-lg text-[var(--text-primary)] leading-tight mb-3">
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="stretched-link group-hover:text-[var(--accent)] transition-colors"
+                    >
                       {item.title}
-                    </h3>
-                  </div>
-                  <div className="font-serif text-3xl text-[var(--accent)] mb-3 tabular-nums">
+                    </a>
+                  </h3>
+                  <div className="font-serif text-3xl text-[var(--accent)] tabular-nums">
                     {formatPrice(Number(item.price))}
                   </div>
-                  <div className="flex items-center justify-center">
-                    {user && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEdit(item); }}
-                          className="btn-ghost text-xs"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(item.id); }}
-                          className="btn-ghost text-xs"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </a>
+                  {user && (
+                    <div className="card-actions mt-4 flex items-center gap-1">
+                      <button onClick={() => startEdit(item)} className="btn-ghost text-xs">
+                        Edit
+                        <span className="sr-only"> {item.title}</span>
+                      </button>
+                      <button onClick={() => handleDelete(item.id)} className="btn-ghost text-xs">
+                        Delete
+                        <span className="sr-only"> {item.title}</span>
+                      </button>
+                    </div>
+                  )}
+                </article>
               )}
             </StaggerCard>
           ))}
