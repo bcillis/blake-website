@@ -10,43 +10,31 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "ui-sans-serif", "system-ui", "sans-serif"],
-        serif: ["var(--font-fraunces)", "ui-serif", "Georgia", "serif"],
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        serif: ["var(--font-lora)", "ui-serif", "Georgia", "serif"],
+        mono: ["var(--font-dm-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       colors: {
         bg: "var(--bg)",
         surface: "var(--surface)",
-        "surface-2": "var(--surface-2)",
-        border: "var(--border)",
-        primary: "var(--text-primary)",
-        secondary: "var(--text-secondary)",
-        muted: "var(--text-muted)",
+        rule: "var(--rule)",
+        "rule-strong": "var(--rule-strong)",
+        ink: "var(--ink)",
+        "ink-2": "var(--ink-2)",
+        "ink-3": "var(--ink-3)",
         accent: "var(--accent)",
-        "accent-soft": "var(--accent-soft)",
-        "accent-strong": "var(--accent-strong)",
-      },
-      boxShadow: {
-        soft: "var(--shadow-soft)",
-        lift: "var(--shadow-lift)",
+        "accent-ink": "var(--accent-ink)",
+        "accent-wash": "var(--accent-wash)",
       },
       borderRadius: {
-        lg: "12px",
-        xl: "16px",
-        "2xl": "20px",
+        // Flat, industrial: everything is a 2px corner or a full pill (never used).
+        DEFAULT: "2px",
+        sm: "2px",
+        md: "2px",
+        lg: "2px",
       },
       maxWidth: {
-        prose: "70ch",
         page: "1080px",
-      },
-      keyframes: {
-        shimmer: {
-          "0%": { backgroundPosition: "-400px 0" },
-          "100%": { backgroundPosition: "400px 0" },
-        },
-      },
-      animation: {
-        shimmer: "shimmer 1.4s linear infinite",
+        text: "68ch",
       },
     },
   },

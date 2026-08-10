@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import { Lora, DM_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
@@ -13,18 +13,20 @@ import {
   absoluteUrl,
 } from "@/lib/site";
 
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const fraunces = Fraunces({
+// Lora carries headings and body; DM Mono carries anything that is data.
+const lora = Lora({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   style: ["normal", "italic"],
-  variable: "--font-fraunces",
+  variable: "--font-lora",
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-dm-mono",
   display: "swap",
 });
 
@@ -90,7 +92,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} ${fraunces.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${lora.variable} ${dmMono.variable}`}>
       <body className="antialiased min-h-screen flex flex-col">
         <script
           type="application/ld+json"
@@ -105,16 +107,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <main id="main" className="flex-1">
               {children}
             </main>
-            <footer className="mt-24 border-t border-[var(--border)] py-10">
-              <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-[var(--text-secondary)]">
-                <span>
-                  Built by Blake · Western University Software Engineering &apos;26
+            <footer className="mt-32 border-t border-[var(--rule)]">
+              <div className="max-w-page mx-auto px-6 py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <span className="meta normal-case tracking-normal text-[var(--ink-3)]">
+                  Blake · Western University Software Engineering &apos;26
                 </span>
-                <nav aria-label="Legal" className="flex items-center gap-4">
-                  <Link href="/privacy" className="hover:text-[var(--accent)] transition-colors">
+                <nav aria-label="Legal" className="flex items-center gap-5">
+                  <Link href="/privacy" className="meta hover:text-[var(--accent)] transition-colors">
                     Privacy
                   </Link>
-                  <Link href="/terms" className="hover:text-[var(--accent)] transition-colors">
+                  <Link href="/terms" className="meta hover:text-[var(--accent)] transition-colors">
                     Terms
                   </Link>
                 </nav>
