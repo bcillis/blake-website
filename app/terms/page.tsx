@@ -14,17 +14,17 @@ export const metadata = pageMetadata({
  */
 export default function TermsPage() {
   return (
-    <div className="max-w-3xl mx-auto px-6 pb-24">
-      <header className="pt-16 pb-10">
-        <p className="eyebrow mb-4">Legal</p>
-        <h1 className="section-title mb-4">Terms</h1>
+    <div className="max-w-text mx-auto px-6 pb-24">
+      <header className="pt-16 pb-10 mb-10 border-b border-[var(--rule-strong)]">
+        <p className="meta mb-5">Legal</p>
+        <h1 className="page-title mb-5">Terms</h1>
         <p className="lead">
           A short set of terms for a small personal site. Nothing here is a
           commercial offer.
         </p>
       </header>
 
-      <div className="prose-content">
+      <div className="prose">
         <h2>What this site is</h2>
         <p>
           BlakeHub is a personal knowledge base — my own notes, references, and

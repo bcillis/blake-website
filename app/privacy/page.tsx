@@ -17,17 +17,17 @@ export const metadata = pageMetadata({
  */
 export default function PrivacyPage() {
   return (
-    <div className="max-w-3xl mx-auto px-6 pb-24">
-      <header className="pt-16 pb-10">
-        <p className="eyebrow mb-4">Legal</p>
-        <h1 className="section-title mb-4">Privacy</h1>
+    <div className="max-w-text mx-auto px-6 pb-24">
+      <header className="pt-16 pb-10 mb-10 border-b border-[var(--rule-strong)]">
+        <p className="meta mb-5">Legal</p>
+        <h1 className="page-title mb-5">Privacy</h1>
         <p className="lead">
           BlakeHub is a personal site. It has no analytics, no advertising, and no
           third-party tracking scripts.
         </p>
       </header>
 
-      <div className="prose-content">
+      <div className="prose">
         <h2>What is collected from visitors</h2>
         <p>
           Nothing. Reading this site does not require an account, and no cookie is

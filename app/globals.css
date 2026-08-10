@@ -372,7 +372,11 @@ html:not(.dark) {
     animation: pulse 1.6s ease-in-out infinite;
   }
 
-  /* ---------- Motion (see components/Motion.tsx) ---------- */
+  /* ---------- Motion ----------
+     Every animation on the site is CSS. Framer Motion's mount-time
+     `initial` state serialized into the prerendered HTML as
+     `style="opacity:0"`, hiding content from non-JS clients and delaying
+     LCP; these keyframes ship visible markup instead. */
   .page-enter {
     animation: enter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
