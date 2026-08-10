@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { createClient, Website } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
-import { FadeUp, StaggerGrid, StaggerCard } from "@/components/Motion";
 
+/** Bare domain, used as the right-hand column of each index row. */
 const hostFromUrl = (url: string) => {
   try {
     return new URL(url).host.replace(/^www\./, "");
@@ -19,6 +18,7 @@ export default function WebsitesPage() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ title: "", description: "", url: "" });
   const [submitting, setSubmitting] = useState(false);
@@ -31,7 +31,10 @@ export default function WebsitesPage() {
 
   const fetchWebsites = async () => {
     const supabase = createClient();
-    const { data } = await supabase.from("websites").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase
+      .from("websites")
+      .select("*")
+      .order("created_at", { ascending: false });
     setWebsites(data || []);
     setLoading(false);
   };
@@ -54,10 +57,23 @@ export default function WebsitesPage() {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("websites")
-      .insert([{ title: formData.title, description: formData.description, url: formData.url, user_id: user.id }])
+      .insert([
+        {
+          title: formData.title,
+          description: formData.description,
+          url: formData.url,
+          user_id: user.id,
+        },
+      ])
       .select()
       .single();
-    if (!error && data) {
+    if (error) {
+      setActionError(`Couldn't add: ${error.message}`);
+      setSubmitting(false);
+      return;
+    }
+    if (data) {
+      setActionError(null);
       setWebsites([data, ...websites]);
       setFormData({ title: "", description: "", url: "" });
       setShowForm(false);
@@ -68,7 +84,12 @@ export default function WebsitesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this website?")) return;
     const supabase = createClient();
-    await supabase.from("websites").delete().eq("id", id);
+    const { error } = await supabase.from("websites").delete().eq("id", id);
+    if (error) {
+      setActionError(`Couldn't delete: ${error.message}`);
+      return;
+    }
+    setActionError(null);
     setWebsites(websites.filter((w) => w.id !== id));
   };
 
@@ -87,7 +108,12 @@ export default function WebsitesPage() {
       .eq("id", editingId)
       .select()
       .single();
-    if (!error && data) {
+    if (error) {
+      setActionError(`Couldn't save: ${error.message}`);
+      return;
+    }
+    if (data) {
+      setActionError(null);
       setWebsites(websites.map((w) => (w.id === editingId ? data : w)));
       setEditingId(null);
     }
@@ -95,131 +121,185 @@ export default function WebsitesPage() {
 
   return (
     <div className="max-w-page mx-auto px-6 pb-24">
-      <header className="pt-16 pb-10 max-w-2xl">
-        <FadeUp>
-          <span className="eyebrow mb-4">The collection</span>
-        </FadeUp>
-        <FadeUp delay={0.05}>
-          <h1 className="section-title mb-4">Websites you should know.</h1>
-        </FadeUp>
-        <FadeUp delay={0.1}>
-          <p className="lead">
-            A growing collection of powerful tools and resources for developers —
-            handpicked, with a sentence on why each one earns its spot.
-          </p>
-        </FadeUp>
+      <header className="pt-16 pb-10">
+        <p className="meta mb-5">Index</p>
+        <h1 className="page-title mb-5">Websites.</h1>
+        {/*
+          Previous copy promised "a sentence on why each one earns its spot",
+          which several entries don't have. This says what's actually here.
+        */}
+        <p className="lead">
+          Tools, references and sites I&apos;ve collected while studying and building
+          software. Newest first.
+        </p>
       </header>
 
-      <FadeUp delay={0.15}>
-        <div className="mb-8 flex flex-col sm:flex-row sm:items-center gap-3">
-          <input
-            type="text"
-            placeholder="Search by title, description, or URL"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input-field sm:flex-1"
-          />
-          <span className="text-xs uppercase tracking-wider text-[var(--text-muted)] sm:px-2">
-            {String(filteredWebsites.length).padStart(2, "0")} entries
-          </span>
-          {user && !showForm && (
-            <button onClick={() => setShowForm(true)} className="btn-primary whitespace-nowrap">
-              + Add website
-            </button>
-          )}
-        </div>
-      </FadeUp>
-
-      <AnimatePresence>
-        {user && showForm && (
-          <motion.form
-            onSubmit={handleAdd}
-            initial={{ opacity: 0, y: -8, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -8, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="card mb-8 space-y-3 overflow-hidden"
-          >
-            <div className="text-xs uppercase tracking-wider text-[var(--text-muted)]">New entry</div>
-            <input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} className="input-field" placeholder="Title" required />
-            <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="textarea-field" placeholder="Description" rows={3} required />
-            <input value={formData.url} onChange={(e) => setFormData({ ...formData, url: e.target.value })} className="input-field" placeholder="https://devdocs.io" type="url" required />
-            <div className="flex gap-2">
-              <button type="submit" disabled={submitting} className="btn-primary">{submitting ? "Adding..." : "Add"}</button>
-              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
-            </div>
-          </motion.form>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 pb-4">
+        <label htmlFor="site-search" className="sr-only">
+          Search websites
+        </label>
+        <input
+          id="site-search"
+          type="search"
+          placeholder="Search title, description or URL"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="field sm:max-w-sm"
+        />
+        <span className="meta sm:ml-auto" aria-live="polite">
+          {String(filteredWebsites.length).padStart(2, "0")}
+          {search ? ` of ${websites.length}` : ""} entries
+        </span>
+        {user && !showForm && (
+          <button onClick={() => setShowForm(true)} className="btn-quiet whitespace-nowrap">
+            Add entry
+          </button>
         )}
-      </AnimatePresence>
+      </div>
+
+      {user && (
+        <div className={`disclosure ${showForm ? "disclosure-open" : ""}`}>
+          <div>
+            <form
+              onSubmit={handleAdd}
+              className="mb-6 border border-[var(--rule-strong)] bg-[var(--surface)] p-5 space-y-3"
+            >
+              <p className="meta">New entry</p>
+              <input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="field"
+                placeholder="Title"
+                required
+              />
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="field-area"
+                placeholder="What is it for?"
+                rows={3}
+                required
+              />
+              <input
+                value={formData.url}
+                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                className="field"
+                placeholder="https://devdocs.io"
+                type="url"
+                required
+              />
+              <div className="flex gap-2 pt-1">
+                <button type="submit" disabled={submitting} className="btn">
+                  {submitting ? "Adding…" : "Add"}
+                </button>
+                <button type="button" onClick={() => setShowForm(false)} className="btn-quiet">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {actionError && (
+        <div role="alert" className="alert mb-6">
+          {actionError}
+        </div>
+      )}
 
       {loading ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="card">
-              <div className="h-5 skeleton w-1/2 mb-3" />
-              <div className="h-3 skeleton w-full mb-2" />
-              <div className="h-3 skeleton w-3/4" />
+        <div className="index" aria-busy="true">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="index-row">
+              <div className="h-5 skeleton w-1/3 mb-2" />
+              <div className="h-3 skeleton w-2/3" />
             </div>
           ))}
         </div>
       ) : filteredWebsites.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-[var(--text-secondary)]">
-            {search ? "No matches." : "No websites yet."}
+        <div className="index">
+          <p className="py-16 text-[var(--ink-3)]">
+            {search ? `No entries match “${search}”.` : "No entries yet."}
           </p>
         </div>
       ) : (
-        <StaggerGrid className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="index">
           {filteredWebsites.map((website) => (
-            <StaggerCard key={website.id} className="h-full">
+            <li key={website.id}>
               {editingId === website.id ? (
-                <form onSubmit={handleEdit} className="card space-y-3">
-                  <input value={editData.title} onChange={(e) => setEditData({ ...editData, title: e.target.value })} className="input-field" required />
-                  <textarea value={editData.description} onChange={(e) => setEditData({ ...editData, description: e.target.value })} className="textarea-field min-h-[80px]" rows={2} required />
-                  <input value={editData.url} onChange={(e) => setEditData({ ...editData, url: e.target.value })} className="input-field" required />
-                  <div className="flex gap-2">
-                    <button type="submit" className="btn-primary">Save</button>
-                    <button type="button" onClick={() => setEditingId(null)} className="btn-secondary">Cancel</button>
+                <form
+                  onSubmit={handleEdit}
+                  className="border-b border-[var(--rule)] py-5 space-y-3"
+                >
+                  <p className="meta">Editing</p>
+                  <input
+                    value={editData.title}
+                    onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                    className="field"
+                    aria-label="Title"
+                    required
+                  />
+                  <textarea
+                    value={editData.description}
+                    onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                    className="field-area min-h-[5rem]"
+                    aria-label="Description"
+                    rows={2}
+                    required
+                  />
+                  <input
+                    value={editData.url}
+                    onChange={(e) => setEditData({ ...editData, url: e.target.value })}
+                    className="field"
+                    aria-label="URL"
+                    type="url"
+                    required
+                  />
+                  <div className="flex gap-2 pt-1">
+                    <button type="submit" className="btn">
+                      Save
+                    </button>
+                    <button type="button" onClick={() => setEditingId(null)} className="btn-quiet">
+                      Cancel
+                    </button>
                   </div>
                 </form>
               ) : (
-                <a
-                  href={website.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="card-interactive group block h-full"
-                >
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <h3 className="font-serif text-xl text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors leading-tight">
-                      {website.title}
-                    </h3>
-                  </div>
-                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">
-                    {website.description}
-                  </p>
-                  <div className="flex items-center justify-center">
+                <article className="index-row group sm:grid-cols-[1fr_auto] sm:items-baseline">
+                  <div className="min-w-0">
+                    <h2 className="row-title">
+                      <a
+                        href={website.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="stretched-link"
+                      >
+                        {website.title}
+                        <span className="sr-only"> (opens in a new tab)</span>
+                      </a>
+                    </h2>
+                    <p className="text-sm text-[var(--ink-2)] mt-1 max-w-[60ch]">
+                      {website.description}
+                    </p>
                     {user && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); startEdit(website); }}
-                          className="btn-ghost text-xs"
-                        >
-                          Edit
+                      <div className="row-actions mt-2.5 flex items-center gap-4">
+                        <button onClick={() => startEdit(website)} className="btn-bare">
+                          Edit<span className="sr-only"> {website.title}</span>
                         </button>
-                        <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(website.id); }}
-                          className="btn-ghost text-xs"
-                        >
-                          Delete
+                        <button onClick={() => handleDelete(website.id)} className="btn-bare">
+                          Delete<span className="sr-only"> {website.title}</span>
                         </button>
                       </div>
                     )}
                   </div>
-                </a>
+                  <span className="data shrink-0 sm:text-right group-hover:text-[var(--accent)] transition-colors">
+                    {hostFromUrl(website.url)}
+                  </span>
+                </article>
               )}
-            </StaggerCard>
+            </li>
           ))}
-        </StaggerGrid>
+        </ul>
       )}
     </div>
   );

@@ -1,131 +1,101 @@
-"use client";
-
 import Link from "next/link";
-import { FadeUp, StaggerGrid, StaggerCard } from "@/components/Motion";
 
+/*
+ * Copy note: the section blurbs below describe what each page actually
+ * contains. The previous versions ("a curated collection of powerful tools…
+ * every developer should know about") promised more than the data delivers.
+ */
 const sections = [
   {
+    index: "01",
     title: "Websites",
     description:
-      "A curated collection of powerful tools, resources, and websites every developer should know about.",
+      "An index of tools and references collected while studying and building software.",
     href: "/websites",
-    cta: "Browse the index",
-    glyph: "✦",
   },
   {
+    index: "02",
     title: "Journey",
     description:
-      "My 4-year path through Western University's Software Engineering program — every course, every topic.",
+      "Four years of Software Engineering at Western University, course by course.",
     href: "/journey",
-    cta: "See the timeline",
-    glyph: "↗",
   },
   {
+    index: "03",
     title: "Guides",
-    description:
-      "Reference guides for tools and technologies — Git, Unity, game dev, and more. Written for future me.",
+    description: "Written references for things I want to remember how to do.",
     href: "/guides",
-    cta: "Read the guides",
-    glyph: "§",
   },
   {
+    index: "04",
     title: "Wishlist",
-    description:
-      "Things I'd love to own one day — gear, gadgets, and the occasional dream purchase.",
+    description: "Gear and gadgets on my radar, with prices in CAD.",
     href: "/wishlist",
-    cta: "View the list",
-    glyph: "♢",
   },
 ];
 
 export default function HomePage() {
   return (
-    <div className="max-w-page mx-auto px-6 pb-24">
-      {/* Hero */}
-      <section className="pt-20 sm:pt-28 pb-16 max-w-3xl">
-        <FadeUp>
-          <span className="eyebrow mb-6">Personal knowledge hub</span>
-        </FadeUp>
+    <div className="max-w-page mx-auto px-6">
+      <div className="grid gap-16 lg:grid-cols-[1fr_20rem] lg:gap-20 pt-16 sm:pt-24 pb-24">
+        {/* Hero — the one place on the site with an entrance animation. */}
+        <section className="fade-up">
+          <p className="meta mb-8">Personal knowledge hub</p>
 
-        <FadeUp delay={0.05}>
-          <h1 className="font-serif text-5xl sm:text-6xl leading-[1.05] tracking-[-0.02em] mb-6 text-[var(--text-primary)]">
-            Hi, I&apos;m{" "}
-            <span className="text-[var(--accent)] italic">Blake</span>.
+          <h1 className="display mb-8">
+            Hi, I&apos;m <span className="italic text-[var(--accent)]">Blake</span>.
           </h1>
-        </FadeUp>
 
-        <FadeUp delay={0.1}>
-          <p className="lead mb-4">
+          <p className="lead mb-6">
             I&apos;m a Software Engineering graduate from Western University. This
             site is a long-running record of the tools, lessons, and references
             I&apos;ve picked up over four years of studying and building software.
           </p>
-        </FadeUp>
 
-        <FadeUp delay={0.15}>
-          <p className="text-sm text-[var(--text-muted)] mb-8">
+          <p className="text-[var(--ink-3)] measure">
             Built for me. Kept public for anyone who finds it useful.
           </p>
-        </FadeUp>
 
-        <FadeUp delay={0.2}>
-          <div className="flex flex-wrap gap-3">
-            <Link href="/journey" className="btn-primary">
-              Explore the journey →
+          <div className="mt-10 flex flex-wrap gap-3">
+            <Link href="/journey" className="btn">
+              Explore the journey
             </Link>
-            <Link href="/guides" className="btn-secondary">
+            <Link href="/guides" className="btn-quiet">
               Read the guides
             </Link>
           </div>
-        </FadeUp>
-      </section>
+        </section>
 
-      {/* Sections */}
-      <section>
-        <FadeUp delay={0.25}>
-          <div className="flex items-baseline justify-between mb-6">
-            <h2 className="font-serif text-2xl tracking-[-0.01em] text-[var(--text-primary)]">
-              Sections
-            </h2>
-            <span className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
-              {String(sections.length).padStart(2, "0")} parts
-            </span>
-          </div>
-        </FadeUp>
+        {/* Contents — a mono index, not a card grid. */}
+        <section aria-labelledby="contents" className="lg:pt-2">
+          <h2 id="contents" className="meta mb-0 pb-3 border-b border-[var(--rule-strong)]">
+            Contents
+          </h2>
 
-        <StaggerGrid className="grid gap-5 sm:grid-cols-2">
-          {sections.map((section) => (
-            <StaggerCard key={section.href}>
-              <Link href={section.href} className="card-interactive group block h-full">
-                <div className="flex items-start justify-between mb-4">
-                  <span
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-lg"
-                    style={{
-                      background: "var(--accent-soft)",
-                      color: "var(--accent)",
-                    }}
-                  >
-                    {section.glyph}
+          <ul>
+            {sections.map((section) => (
+              <li key={section.href}>
+                <Link
+                  href={section.href}
+                  className="group flex gap-4 py-4 border-b border-[var(--rule)] transition-colors hover:bg-[var(--accent-wash)]"
+                >
+                  <span className="data pt-1 text-[var(--ink-3)] group-hover:text-[var(--accent)] transition-colors">
+                    {section.index}
                   </span>
-                  <span className="text-xs uppercase tracking-wider text-[var(--text-muted)] mt-2">
-                    /{section.href.replace("/", "") || "home"}
+                  <span className="min-w-0">
+                    <span className="block font-serif text-lg leading-snug text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">
+                      {section.title}
+                    </span>
+                    <span className="block text-sm leading-normal text-[var(--ink-2)] mt-0.5">
+                      {section.description}
+                    </span>
                   </span>
-                </div>
-                <h3 className="font-serif text-2xl text-[var(--text-primary)] mb-2 group-hover:text-[var(--accent)] transition-colors">
-                  {section.title}
-                </h3>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-5">
-                  {section.description}
-                </p>
-                <span className="inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] group-hover:gap-2 transition-all">
-                  {section.cta}
-                  <span>→</span>
-                </span>
-              </Link>
-            </StaggerCard>
-          ))}
-        </StaggerGrid>
-      </section>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
     </div>
   );
 }
