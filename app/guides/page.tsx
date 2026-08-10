@@ -3,10 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
 import { createClient, Guide } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
-import { FadeUp, StaggerGrid, StaggerCard } from "@/components/Motion";
 
 /** Lowercase, URL-safe slug. Lookups use `.eq("slug", …)`, which is case-sensitive. */
 const slugify = (value: string) =>
@@ -15,12 +13,16 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
+/** First real line of the markdown body, used as the dek in the contents list. */
 const previewLine = (content: string) => {
   const lines = content.split("\n").filter((l) => l.trim() && !l.trim().startsWith("#"));
-  const first = lines[0] ?? "";
-  const cleaned = first.replace(/[#*_`>]/g, "").trim();
-  return cleaned.length > 110 ? cleaned.slice(0, 110) + "…" : cleaned || "No content yet.";
+  const cleaned = (lines[0] ?? "").replace(/[#*_`>]/g, "").trim();
+  if (!cleaned) return null;
+  return cleaned.length > 120 ? `${cleaned.slice(0, 120)}…` : cleaned;
 };
+
+const formatDate = (value: string) =>
+  new Date(value).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
 
 export default function GuidesPage() {
   const { user } = useAuth();
@@ -38,7 +40,10 @@ export default function GuidesPage() {
 
   const fetchGuides = async () => {
     const supabase = createClient();
-    const { data } = await supabase.from("guides").select("*").order("created_at", { ascending: true });
+    const { data } = await supabase
+      .from("guides")
+      .select("*")
+      .order("created_at", { ascending: true });
     setGuides(data || []);
     setLoading(false);
   };
@@ -51,12 +56,14 @@ export default function GuidesPage() {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("guides")
-      .insert([{
-        title: formData.title,
-        slug,
-        content: `# ${formData.title}\n\n`,
-        user_id: user?.id,
-      }])
+      .insert([
+        {
+          title: formData.title,
+          slug,
+          content: `# ${formData.title}\n\n`,
+          user_id: user?.id,
+        },
+      ])
       .select()
       .single();
     if (error) {
@@ -85,143 +92,126 @@ export default function GuidesPage() {
 
   return (
     <div className="max-w-page mx-auto px-6 pb-24">
-      <header className="pt-16 pb-10 max-w-2xl">
-        <FadeUp>
-          <span className="eyebrow mb-4">Reference library</span>
-        </FadeUp>
-        <FadeUp delay={0.05}>
-          <h1 className="section-title mb-4">Guides for future me.</h1>
-        </FadeUp>
-        <FadeUp delay={0.1}>
-          <p className="lead">
-            How-to guides and references for tools and technologies — Git, Unity,
-            game dev, and more. Written in markdown.
-          </p>
-        </FadeUp>
+      <header className="pt-16 pb-10">
+        <p className="meta mb-5">Contents</p>
+        <h1 className="page-title mb-5">Guides.</h1>
+        <p className="lead">
+          Written references for things I want to remember how to do. Each one is a
+          Markdown document I keep adding to.
+        </p>
       </header>
 
-      <FadeUp delay={0.15}>
-        <div className="mb-8 flex items-center justify-between gap-3">
-          <span className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
-            {String(guides.length).padStart(2, "0")} guides
-          </span>
-          {user && !showForm && (
-            <button onClick={() => setShowForm(true)} className="btn-primary">
-              + New guide
-            </button>
-          )}
-        </div>
-      </FadeUp>
-
-      <AnimatePresence>
-        {user && showForm && (
-          <motion.form
-            onSubmit={handleCreate}
-            initial={{ opacity: 0, y: -8, height: 0 }}
-            animate={{ opacity: 1, y: 0, height: "auto" }}
-            exit={{ opacity: 0, y: -8, height: 0 }}
-            transition={{ duration: 0.3 }}
-            className="card mb-8 space-y-3 overflow-hidden"
-          >
-            <div className="text-xs uppercase tracking-wider text-[var(--text-muted)]">New guide</div>
-            <input
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="input-field"
-              placeholder="Title — e.g. Git & GitHub basics"
-              required
-            />
-            <input
-              value={formData.slug}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              className="input-field"
-              placeholder="URL slug (optional, auto-generated)"
-            />
-            <div className="flex gap-2">
-              <button type="submit" disabled={submitting} className="btn-primary">
-                {submitting ? "Creating..." : "Create"}
-              </button>
-              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">
-                Cancel
-              </button>
-            </div>
-          </motion.form>
+      <div className="flex items-center justify-between gap-3 pb-4">
+        <span className="meta">
+          {String(guides.length).padStart(2, "0")} {guides.length === 1 ? "guide" : "guides"}
+        </span>
+        {user && !showForm && (
+          <button onClick={() => setShowForm(true)} className="btn-quiet">
+            New guide
+          </button>
         )}
-      </AnimatePresence>
+      </div>
+
+      {user && (
+        <div className={`disclosure ${showForm ? "disclosure-open" : ""}`}>
+          <div>
+            <form
+              onSubmit={handleCreate}
+              className="mb-6 border border-[var(--rule-strong)] bg-[var(--surface)] p-5 space-y-3"
+            >
+              <p className="meta">New guide</p>
+              <input
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="field"
+                placeholder="Title — e.g. Git & GitHub basics"
+                required
+              />
+              <div>
+                <input
+                  value={formData.slug}
+                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                  className="field"
+                  placeholder="URL slug (optional)"
+                />
+                <p className="data mt-1.5 text-[var(--ink-3)]">
+                  /guides/{slugify(formData.slug || formData.title) || "…"}
+                </p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" disabled={submitting} className="btn">
+                  {submitting ? "Creating…" : "Create"}
+                </button>
+                <button type="button" onClick={() => setShowForm(false)} className="btn-quiet">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {actionError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-400"
-        >
+        <div role="alert" className="alert mb-6">
           {actionError}
         </div>
       )}
 
       {loading ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+        <div className="index" aria-busy="true">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="card">
-              <div className="h-5 skeleton w-1/2 mb-3" />
-              <div className="h-3 skeleton w-full" />
+            <div key={i} className="index-row">
+              <div className="h-5 skeleton w-1/3 mb-2" />
+              <div className="h-3 skeleton w-2/3" />
             </div>
           ))}
         </div>
       ) : guides.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-[var(--text-secondary)]">No guides yet.</p>
+        <div className="index">
+          <p className="py-16 text-[var(--ink-3)]">No guides yet.</p>
         </div>
       ) : (
-        <StaggerGrid className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {guides.map((guide) => (
-            <StaggerCard key={guide.id} className="h-full">
-              <article className="card-interactive card-stretch group flex h-full flex-col">
-                <div className="flex items-center gap-2 mb-4">
+        <ol className="index">
+          {guides.map((guide, i) => {
+            const dek = previewLine(guide.content);
+            return (
+              <li key={guide.id}>
+                <article className="index-row group sm:grid-cols-[2.5rem_1fr_auto] sm:items-baseline">
                   <span
                     aria-hidden="true"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sm"
-                    style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+                    className="data text-[var(--ink-3)] group-hover:text-[var(--accent)] transition-colors"
                   >
-                    §
+                    {String(i + 1).padStart(2, "0")}
                   </span>
-                  {/* Not uppercased: slugs are lowercase and case-sensitive in the URL. */}
-                  <span className="font-mono text-xs text-[var(--text-muted)]">
-                    /{guide.slug}
-                  </span>
-                </div>
-                <h3 className="font-serif text-xl text-[var(--text-primary)] mb-2 leading-tight">
-                  <Link
-                    href={`/guides/${guide.slug}`}
-                    className="stretched-link group-hover:text-[var(--accent)] transition-colors"
-                  >
-                    {guide.title}
-                  </Link>
-                </h3>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">
-                  {previewLine(guide.content)}
-                </p>
-                <span
-                  aria-hidden="true"
-                  className="mt-auto inline-flex items-center gap-1 text-sm font-medium text-[var(--accent)] group-hover:gap-2 transition-all"
-                >
-                  Read guide <span>→</span>
-                </span>
 
-                {user && (
-                  <button
-                    onClick={() => handleDelete(guide.id)}
-                    className="card-actions absolute top-3 right-3 p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
-                  >
-                    <svg aria-hidden="true" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                    </svg>
-                    <span className="sr-only">Delete {guide.title}</span>
-                  </button>
-                )}
-              </article>
-            </StaggerCard>
-          ))}
-        </StaggerGrid>
+                  <div className="min-w-0">
+                    <h2 className="row-title">
+                      <Link href={`/guides/${guide.slug}`} className="stretched-link">
+                        {guide.title}
+                      </Link>
+                    </h2>
+                    {dek ? (
+                      <p className="text-sm text-[var(--ink-2)] mt-1 max-w-[60ch]">{dek}</p>
+                    ) : (
+                      <p className="text-sm text-[var(--ink-3)] italic mt-1">Not written yet.</p>
+                    )}
+                    {user && (
+                      <div className="row-actions mt-2.5">
+                        <button onClick={() => handleDelete(guide.id)} className="btn-bare">
+                          Delete<span className="sr-only"> {guide.title}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="data shrink-0 sm:text-right text-[var(--ink-3)]">
+                    {guide.updated_at ? formatDate(guide.updated_at) : ""}
+                  </span>
+                </article>
+              </li>
+            );
+          })}
+        </ol>
       )}
     </div>
   );
