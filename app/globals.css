@@ -17,9 +17,11 @@ html:not(.dark) {
   --rule: #ddd6c9;
   --rule-strong: #c4bba9;
 
-  --ink: #191510;
-  --ink-2: #57503f;
-  --ink-3: #8a8271;
+  --ink: #191510; /* 16.3:1 on --bg */
+  --ink-2: #57503f; /* 7.2:1 */
+  /* --ink-3 carries .meta labels, which are small and informative, so it has
+     to clear 4.5:1 rather than sit at a decorative-grey contrast. */
+  --ink-3: #6f6857; /* 5.0:1 */
 
   --accent: #b4432a; /* 5.0:1 on --bg — AA for normal text */
   --accent-ink: #ffffff; /* text on a filled accent block */
@@ -32,9 +34,9 @@ html:not(.dark) {
   --rule: #2e2822;
   --rule-strong: #453d33;
 
-  --ink: #f0ebe2;
-  --ink-2: #a79e8d;
-  --ink-3: #6e6657;
+  --ink: #f0ebe2; /* 15.7:1 on --bg */
+  --ink-2: #a79e8d; /* 7.0:1 */
+  --ink-3: #8a8170; /* 4.9:1 — see the light-theme note above */
 
   --accent: #e4714f; /* 6.1:1 on --bg */
   --accent-ink: #1a0d08;

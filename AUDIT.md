@@ -260,6 +260,67 @@ The privacy page describes only what the code actually does. Both legal pages ca
 
 ---
 
+# Phase 3 — UI/UX overhaul (completed 2026-08-10)
+
+Direction: editorial minimalism with industrial precision. Warm neutrals, a single vermilion accent, Lora + DM Mono, flat components, and **the index as the site's primary layout device** in place of card grids.
+
+## Sections C and D — resolved
+
+| # | Was | Now |
+|---|---|---|
+| C5 | Footer filler "v1 · made with care" | Removed; footer is a ruled meta row with legal links |
+| C7 | Seven instances of LLM-flavoured copy | Rewritten. The Websites lead no longer promises "a sentence on why each one earns its spot"; the duplicated "Gear, gadgets…" line and the twice-told "future me" joke are gone; home section blurbs describe what the pages contain |
+| D1 | Four non-accent year hues (`sky`/`violet`/`emerald`/`amber`) + gradients | All gradients removed sitewide. Years are told apart by a large mono numeral |
+| D3 | 12 nested motion wrappers on the home page alone | One hero entrance, hover states, page transition. Nothing scroll-triggered |
+| D4 | `✦ ↗ § ♢ ⤓ ✓` as icons | Replaced by mono numerals and real SVG; no glyph-as-icon remains |
+| D2, D6 | Already passing | Unchanged |
+
+## Verified after the final pass
+
+- `npm run build` compiles clean; `npx next lint` → **zero warnings**
+- **0** `style="opacity:0"` across all 9 prerendered pages
+- Exactly **one `<h1>`** on every page
+- All 17 routes return expected status, including `/guides/A` and `/guides/a` (both 200) and `/nope-404` (404)
+- Unique `<title>` on every route; `og:*`, `twitter:*`, canonical, `icon`, `apple-touch-icon` and JSON-LD all present
+- **Contrast measured on rendered colours, both themes** — every text token clears AA:
+
+  | Token | Light | Dark |
+  |---|---|---|
+  | `--ink` | 16.26 | 15.72 |
+  | `--ink-2` | 7.16 | 7.04 |
+  | `--ink-3` | 4.95 | 4.85 |
+  | `--accent` | 4.98 | 6.02 |
+
+  `--ink-3` originally measured **3.41 / 3.29** and failed. It styles `.meta` labels ("30 ENTRIES", "FILTER BY TOPIC") which are small and informative, so both values were darkened/lightened until they cleared 4.5:1.
+
+## Bundle
+
+`framer-motion` is uninstalled — every animation is CSS.
+
+| Route | Phase 1 | Now |
+|---|---|---|
+| `/` | 136 kB | **96.2 kB** |
+| `/websites` | 193 kB | **151 kB** |
+| `/journey` | 196 kB | **154 kB** |
+| `/guides` | 200 kB | **160 kB** |
+| `/wishlist` | 193 kB | **152 kB** |
+| `/login` | 190 kB | **150 kB** |
+| `/guides/[slug]` | 241 kB | **203 kB** |
+| Total gzipped JS | 364 KB | **322 KB** |
+
+`/guides/[slug]` remains the heaviest route: that's `react-markdown` + `remark-gfm` doing real work, correctly code-split to the one route that needs it.
+
+## Still outstanding — yours, not mine
+
+1. **Run `supabase-schema.sql`** in the SQL Editor (storage path scoping + `with check`). Still not applied to the live database.
+2. **Enable leaked-password protection** in Dashboard → Authentication → Policies.
+3. **The guide titled "A"** whose body is the scaffold string. A numbered contents list makes it the whole Guides section. Write it or delete the row.
+4. **Seven thin website descriptions** ("More Components" ×2, "React components", …). The index gives descriptions more prominence than the card grid did.
+5. **Two `TODO(blake)` markers** — a contact address on `/privacy`, a content licence on `/terms`.
+6. **`next@16`** — the two remaining HIGH advisories both live inside `next` and need a two-major jump plus React 19. Deliberately kept separate from this work.
+
+---
+
 ### Original Phase 2 ordering (for reference)
 
 1. `app/template.tsx` opacity, delete the guide placeholder, fix the three delete handlers.
