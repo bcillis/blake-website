@@ -17,6 +17,9 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const { user, loading, signOut } = useAuth();
+  const visibleNavLinks = user
+    ? [...navLinks, { href: "/notes", label: "Notes" }]
+    : navLinks;
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -55,7 +58,7 @@ export default function Navbar() {
           </Link>
 
           <nav aria-label="Main" className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => {
+            {visibleNavLinks.map((link) => {
               const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
               return (
                 <Link
@@ -126,7 +129,7 @@ export default function Navbar() {
               aria-label="Main (mobile)"
               className="flex flex-col border-t border-[var(--rule)] py-2"
             >
-              {navLinks.map((link) => {
+              {visibleNavLinks.map((link) => {
                 const active =
                   link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
                 return (
