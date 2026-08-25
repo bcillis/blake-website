@@ -52,6 +52,30 @@ create table if not exists public.wishlist (
   created_at timestamptz default now()
 );
 
+-- 5. Notes table (private — owner-only for both read and write)
+create table if not exists public.notes (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  user_id uuid references auth.users(id),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- 6. Note entries table (private — owner-only for both read and write)
+create table if not exists public.note_entries (
+  id uuid default gen_random_uuid() primary key,
+  note_id uuid not null references public.notes(id) on delete cascade,
+  user_id uuid references auth.users(id),
+  kind text not null check (kind in ('text','image')),
+  content text,
+  image_path text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists note_entries_note_id_created_at_idx
+  on public.note_entries (note_id, created_at);
+
 -- =============================================================
 -- Row Level Security (RLS) Policies
 -- Everyone can READ, only the owner can WRITE
@@ -125,6 +149,41 @@ create policy "Owners can update their wishlist" on public.wishlist
   for update using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 create policy "Owners can delete their wishlist" on public.wishlist
+  for delete using (auth.uid() = user_id);
+
+alter table public.notes         enable row level security;
+alter table public.note_entries  enable row level security;
+
+-- Notes policies (owner-only for ALL operations, unlike the public-read tables above)
+drop policy if exists "Owners can view their notes"    on public.notes;
+drop policy if exists "Owners can insert their notes"  on public.notes;
+drop policy if exists "Owners can update their notes"  on public.notes;
+drop policy if exists "Owners can delete their notes"  on public.notes;
+
+create policy "Owners can view their notes" on public.notes
+  for select using (auth.uid() = user_id);
+create policy "Owners can insert their notes" on public.notes
+  for insert with check (auth.uid() = user_id);
+create policy "Owners can update their notes" on public.notes
+  for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+create policy "Owners can delete their notes" on public.notes
+  for delete using (auth.uid() = user_id);
+
+-- Note entries policies (owner-only for ALL operations)
+drop policy if exists "Owners can view their note entries"    on public.note_entries;
+drop policy if exists "Owners can insert their note entries"  on public.note_entries;
+drop policy if exists "Owners can update their note entries"  on public.note_entries;
+drop policy if exists "Owners can delete their note entries"  on public.note_entries;
+
+create policy "Owners can view their note entries" on public.note_entries
+  for select using (auth.uid() = user_id);
+create policy "Owners can insert their note entries" on public.note_entries
+  for insert with check (auth.uid() = user_id);
+create policy "Owners can update their note entries" on public.note_entries
+  for update using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+create policy "Owners can delete their note entries" on public.note_entries
   for delete using (auth.uid() = user_id);
 
 -- =============================================================
