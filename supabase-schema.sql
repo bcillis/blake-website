@@ -66,7 +66,7 @@ create table if not exists public.note_entries (
   id uuid default gen_random_uuid() primary key,
   note_id uuid not null references public.notes(id) on delete cascade,
   user_id uuid references auth.users(id),
-  kind text not null check (kind in ('text','image')),
+  kind text not null constraint note_entries_kind_check check (kind in ('text','image')),
   content text,
   image_path text,
   created_at timestamptz default now(),
@@ -86,6 +86,8 @@ alter table public.websites      enable row level security;
 alter table public.guides        enable row level security;
 alter table public.course_notes  enable row level security;
 alter table public.wishlist      enable row level security;
+alter table public.notes         enable row level security;
+alter table public.note_entries  enable row level security;
 
 -- Websites policies
 drop policy if exists "Anyone can view websites"                  on public.websites;
@@ -151,10 +153,7 @@ create policy "Owners can update their wishlist" on public.wishlist
 create policy "Owners can delete their wishlist" on public.wishlist
   for delete using (auth.uid() = user_id);
 
-alter table public.notes         enable row level security;
-alter table public.note_entries  enable row level security;
-
--- Notes policies (owner-only for ALL operations, unlike the public-read tables above)
+-- Notes policies (owner-only — select is also restricted, unlike tables above)
 drop policy if exists "Owners can view their notes"    on public.notes;
 drop policy if exists "Owners can insert their notes"  on public.notes;
 drop policy if exists "Owners can update their notes"  on public.notes;
