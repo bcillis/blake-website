@@ -46,3 +46,22 @@ export interface WishlistItem {
   user_id: string;
   created_at: string;
 }
+
+export interface Note {
+  id: string;
+  title: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NoteEntry {
+  id: string;
+  note_id: string;
+  user_id: string;
+  kind: "text" | "image";
+  content: string | null;
+  image_path: string | null;
+  created_at: string;
+  updated_at: string;
+}
