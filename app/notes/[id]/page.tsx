@@ -8,6 +8,13 @@ import { useAuth } from "@/components/AuthProvider";
 
 const IMAGE_URL_TTL_SECONDS = 60 * 60;
 
+const MIME_TO_EXT: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+};
+
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString("en-CA", { hour: "2-digit", minute: "2-digit", hour12: false });
 
@@ -36,6 +43,7 @@ export default function NotePage() {
   const [notFound, setNotFound] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const logRef = useRef<HTMLDivElement | null>(null);
@@ -143,6 +151,66 @@ export default function NotePage() {
       requestAnimationFrame(scrollToBottom);
     }
     setSending(false);
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!user || !note) return;
+    const imageItem = Array.from(e.clipboardData.items).find((item) =>
+      item.type.startsWith("image/")
+    );
+    if (!imageItem) return; // Fall through to default text paste.
+    e.preventDefault();
+    const blob = imageItem.getAsFile();
+    if (!blob) return;
+
+    setUploading(true);
+    const supabase = createClient();
+    const ext = MIME_TO_EXT[blob.type] ?? "bin";
+    const objectPath = `${user.id}/${note.id}/${crypto.randomUUID()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("note-images")
+      .upload(objectPath, blob, { contentType: blob.type, upsert: false });
+    if (uploadError) {
+      setError(`Upload failed: ${uploadError.message}`);
+      setUploading(false);
+      return;
+    }
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("note_entries")
+      .insert([
+        {
+          note_id: note.id,
+          user_id: user.id,
+          kind: "image",
+          image_path: objectPath,
+        },
+      ])
+      .select()
+      .single();
+    if (insertError || !inserted) {
+      setError(`Couldn't attach image: ${insertError?.message ?? "unknown error"}`);
+      // Clean up the orphaned upload — we own the folder.
+      await supabase.storage.from("note-images").remove([objectPath]);
+      setUploading(false);
+      return;
+    }
+
+    const { data: signed } = await supabase.storage
+      .from("note-images")
+      .createSignedUrl(objectPath, IMAGE_URL_TTL_SECONDS);
+    if (signed?.signedUrl) {
+      setSignedUrls((prev) => ({ ...prev, [inserted.id]: signed.signedUrl }));
+    }
+    setEntries((prev) => [...prev, inserted]);
+    setError(null);
+    await supabase
+      .from("notes")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", note.id);
+    requestAnimationFrame(scrollToBottom);
+    setUploading(false);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -290,6 +358,9 @@ export default function NotePage() {
         <label htmlFor="note-input" className="sr-only">
           New entry
         </label>
+        {uploading && (
+          <p className="data text-[var(--ink-3)] pb-2">Uploading image…</p>
+        )}
         <div className="flex items-end gap-2">
           <textarea
             id="note-input"
@@ -297,6 +368,7 @@ export default function NotePage() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}
+            onPaste={handlePaste}
             rows={2}
             className="field-area flex-1 font-serif text-sm"
             placeholder="Write a note, or paste an image (Ctrl+V)…"
