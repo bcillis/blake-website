@@ -230,3 +230,46 @@ create policy "Owners can delete course files" on storage.objects
     bucket_id = 'course-files'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- =============================================================
+-- Private Storage bucket for note images (pasted screenshots, etc.)
+-- Unlike course-files, this bucket is NOT public — reads require a signed URL.
+-- =============================================================
+
+insert into storage.buckets (id, name, public)
+values ('note-images', 'note-images', false)
+on conflict (id) do update set public = false;
+
+drop policy if exists "Owners can view note images"    on storage.objects;
+drop policy if exists "Owners can upload note images"  on storage.objects;
+drop policy if exists "Owners can update note images"  on storage.objects;
+drop policy if exists "Owners can delete note images"  on storage.objects;
+
+-- The app uploads to `{user.id}/{note_id}/{uuid}.{ext}`, so the first path
+-- segment must equal the caller's uid for every operation, INCLUDING select
+-- (because the bucket is private and even signed-URL generation goes through
+-- the select policy).
+create policy "Owners can view note images" on storage.objects
+  for select using (
+    bucket_id = 'note-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+create policy "Owners can upload note images" on storage.objects
+  for insert with check (
+    bucket_id = 'note-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+create policy "Owners can update note images" on storage.objects
+  for update using (
+    bucket_id = 'note-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  )
+  with check (
+    bucket_id = 'note-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+create policy "Owners can delete note images" on storage.objects
+  for delete using (
+    bucket_id = 'note-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
