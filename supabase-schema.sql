@@ -314,3 +314,46 @@ alter table public.note_entries
 create index if not exists note_entries_note_id_is_favorite_idx
   on public.note_entries (note_id, is_favorite)
   where is_favorite = true;
+
+-- =============================================================
+-- Cards redesign — image_path columns + entry-images bucket
+-- Adds a nullable image_path to websites/wishlist and a public
+-- Storage bucket for pasted images. Safe to re-run.
+-- =============================================================
+
+alter table public.websites add column if not exists image_path text;
+alter table public.wishlist add column if not exists image_path text;
+
+insert into storage.buckets (id, name, public)
+values ('entry-images', 'entry-images', true)
+on conflict (id) do update set public = true;
+
+drop policy if exists "Anyone can view entry images"   on storage.objects;
+drop policy if exists "Owners can upload entry images" on storage.objects;
+drop policy if exists "Owners can update entry images" on storage.objects;
+drop policy if exists "Owners can delete entry images" on storage.objects;
+
+-- Writes are scoped to the uploader's own folder. The app uploads to
+-- `{user.id}/{table}/{row.id}/{uuid}.{ext}`, so the first segment must
+-- equal the caller's uid.
+create policy "Anyone can view entry images" on storage.objects
+  for select using (bucket_id = 'entry-images');
+create policy "Owners can upload entry images" on storage.objects
+  for insert with check (
+    bucket_id = 'entry-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+create policy "Owners can update entry images" on storage.objects
+  for update using (
+    bucket_id = 'entry-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  )
+  with check (
+    bucket_id = 'entry-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
+create policy "Owners can delete entry images" on storage.objects
+  for delete using (
+    bucket_id = 'entry-images'
+    and (storage.foldername(name))[1] = auth.uid()::text
+  );
