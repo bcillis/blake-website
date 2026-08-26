@@ -493,6 +493,38 @@ export default function NotePage() {
     setError(null);
   };
 
+  const scrollToEntry = (entryId: string) => {
+    const doScroll = () => {
+      const el = document.getElementById(`entry-${entryId}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("entry-highlight");
+      window.setTimeout(() => {
+        el.classList.remove("entry-highlight");
+      }, 1500);
+    };
+
+    const targetEntry = entries.find((e) => e.id === entryId);
+    const hiddenByFilter =
+      targetEntry &&
+      ((filter === "text" && targetEntry.kind !== "text") ||
+        (filter === "images" && targetEntry.kind !== "image"));
+
+    if (hiddenByFilter) {
+      // Clear the filter first, then scroll after a paint frame so the target
+      // row exists in the DOM by the time we ask for it.
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("filter");
+      const query = params.toString();
+      router.replace(`/notes/${noteId}${query ? `?${query}` : ""}`, { scroll: false });
+      // Two rAFs: one for the URL change to flush, one for the re-rendered row.
+      requestAnimationFrame(() => requestAnimationFrame(doScroll));
+      return;
+    }
+
+    doScroll();
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id || !note) return;
@@ -629,6 +661,12 @@ export default function NotePage() {
     return true;
   });
 
+  const favoriteEntries = [...entries]
+    .filter((e) => e.is_favorite)
+    .sort(
+      (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+    );
+
   if (!authLoading && !user) {
     return (
       <div className="max-w-text mx-auto px-6 pt-20 pb-24">
@@ -748,10 +786,10 @@ export default function NotePage() {
 
       <FavoritesSidebar
         variant="mobile"
-        favorites={[]}
+        favorites={favoriteEntries}
         signedUrls={signedUrls}
-        onScrollToEntry={() => {}}
-        onUnstar={() => {}}
+        onScrollToEntry={scrollToEntry}
+        onUnstar={toggleFavorite}
       />
 
       {entries.length > 0 && (
@@ -974,10 +1012,10 @@ export default function NotePage() {
 
       <FavoritesSidebar
         variant="desktop"
-        favorites={[]}
+        favorites={favoriteEntries}
         signedUrls={signedUrls}
-        onScrollToEntry={() => {}}
-        onUnstar={() => {}}
+        onScrollToEntry={scrollToEntry}
+        onUnstar={toggleFavorite}
       />
     </div>
   );
