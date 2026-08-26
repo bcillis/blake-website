@@ -213,6 +213,31 @@ export default function NotePage() {
     setUploading(false);
   };
 
+  const deleteEntry = async (entry: NoteEntry) => {
+    if (!confirm("Delete this entry?")) return;
+    const supabase = createClient();
+    if (entry.kind === "image" && entry.image_path) {
+      // Best-effort: proceed even if Storage delete fails so the row goes away.
+      await supabase.storage.from("note-images").remove([entry.image_path]);
+    }
+    const { error: deleteError } = await supabase
+      .from("note_entries")
+      .delete()
+      .eq("id", entry.id);
+    if (deleteError) {
+      setError(`Couldn't delete: ${deleteError.message}`);
+      return;
+    }
+    setError(null);
+    setEntries((prev) => prev.filter((e) => e.id !== entry.id));
+    setSignedUrls((prev) => {
+      if (!(entry.id in prev)) return prev;
+      const next = { ...prev };
+      delete next[entry.id];
+      return next;
+    });
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -308,7 +333,7 @@ export default function NotePage() {
                     {formatDayLabel(entry.created_at)}
                   </p>
                 )}
-                <div className="grid grid-cols-[3.5rem_1fr] gap-3">
+                <div className="group grid grid-cols-[3.5rem_1fr] gap-3">
                   <time
                     dateTime={entry.created_at}
                     className="data text-[var(--ink-3)] pt-0.5"
@@ -340,6 +365,11 @@ export default function NotePage() {
                         [image unavailable]
                       </p>
                     )}
+                    <div className="row-actions mt-1.5">
+                      <button onClick={() => deleteEntry(entry)} className="btn-bare">
+                        Delete<span className="sr-only"> entry</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
