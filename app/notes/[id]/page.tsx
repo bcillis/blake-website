@@ -90,12 +90,6 @@ const SortableEntryRow = ({
       className="group grid grid-cols-[2.25rem_1fr] gap-3"
     >
       <div className="flex flex-col items-center pt-0.5">
-        <time
-          dateTime={entry.created_at}
-          className="data text-[11px] text-[var(--ink-3)] leading-none mb-1"
-        >
-          {timeLabel}
-        </time>
         <button
           type="button"
           aria-label="Reorder entry"
@@ -115,6 +109,12 @@ const SortableEntryRow = ({
             <circle cx="9" cy="13" r="1.2" fill="currentColor" />
           </svg>
         </button>
+        <time
+          dateTime={entry.created_at}
+          className="data text-[11px] text-[var(--ink-3)] leading-none mt-1"
+        >
+          {timeLabel}
+        </time>
       </div>
       <div className="min-w-0">{children}</div>
     </div>
