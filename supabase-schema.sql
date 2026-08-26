@@ -273,3 +273,31 @@ create policy "Owners can delete note images" on storage.objects
     bucket_id = 'note-images'
     and (storage.foldername(name))[1] = auth.uid()::text
   );
+
+-- =============================================================
+-- Notes list mechanics — Phase 1 additions
+-- Adds a custom-order slot to note entries and a per-note sort preference.
+-- Safe to re-run (all statements are idempotent).
+-- =============================================================
+
+alter table public.note_entries
+  add column if not exists position double precision;
+
+create index if not exists note_entries_note_id_position_idx
+  on public.note_entries (note_id, position);
+
+alter table public.notes
+  add column if not exists sort_mode text
+    not null default 'date';
+
+-- Named constraint so re-runs don't create duplicate anonymous checks.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'notes_sort_mode_check'
+  ) then
+    alter table public.notes
+      add constraint notes_sort_mode_check
+      check (sort_mode in ('date','custom'));
+  end if;
+end $$;
