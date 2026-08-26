@@ -301,3 +301,16 @@ begin
       check (sort_mode in ('date','custom'));
   end if;
 end $$;
+
+-- =============================================================
+-- Notes list mechanics — Phase 2 additions
+-- Adds a star/favorite flag on note entries with a partial index
+-- for the favorites-sidebar query. Safe to re-run.
+-- =============================================================
+
+alter table public.note_entries
+  add column if not exists is_favorite boolean not null default false;
+
+create index if not exists note_entries_note_id_is_favorite_idx
+  on public.note_entries (note_id, is_favorite)
+  where is_favorite = true;
