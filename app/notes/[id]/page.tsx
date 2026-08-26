@@ -385,7 +385,8 @@ export default function NotePage() {
   }
 
   return (
-    <div className="max-w-text mx-auto px-6 pb-24 flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="max-w-page mx-auto px-6 pb-24 lg:grid lg:grid-cols-[1fr_20rem] lg:gap-8">
+      <div className="min-w-0 flex flex-col min-h-[calc(100vh-4rem)]">
       <nav aria-label="Breadcrumb" className="pt-12 pb-6">
         <ol className="flex items-center gap-2 meta">
           <li>
@@ -591,6 +592,17 @@ export default function NotePage() {
           </button>
         </div>
       </div>
+      </div>
+
+      <aside
+        aria-label="Favorites"
+        className="hidden lg:block lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto pt-12"
+      >
+        <p className="meta mb-3">Favorites</p>
+        <p className="text-sm text-[var(--ink-3)]">
+          Favorites will live here.
+        </p>
+      </aside>
     </div>
   );
 }
