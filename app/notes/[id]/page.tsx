@@ -357,6 +357,22 @@ export default function NotePage() {
     router.replace(`/notes/${noteId}${query ? `?${query}` : ""}`, { scroll: false });
   };
 
+  const setSortMode = async (next: "date" | "custom") => {
+    if (!note || note.sort_mode === next) return;
+    // Optimistic local flip so the log re-orders immediately.
+    setNote({ ...note, sort_mode: next });
+    const supabase = createClient();
+    const { error: updateError } = await supabase
+      .from("notes")
+      .update({ sort_mode: next })
+      .eq("id", note.id);
+    if (updateError) {
+      // Revert on failure.
+      setNote(note);
+      setError(`Couldn't change sort: ${updateError.message}`);
+    }
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -364,7 +380,28 @@ export default function NotePage() {
     }
   };
 
-  const visibleEntries = entries.filter((entry) => {
+  const sortedEntries = (() => {
+    if (!note || note.sort_mode === "date") {
+      return [...entries].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+    }
+    return [...entries].sort((a, b) => {
+      const ap = a.position;
+      const bp = b.position;
+      if (ap == null && bp == null) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      if (ap == null) return 1;
+      if (bp == null) return -1;
+      if (ap === bp) {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return ap - bp;
+    });
+  })();
+
+  const visibleEntries = sortedEntries.filter((entry) => {
     if (filter === "text") return entry.kind === "text";
     if (filter === "images") return entry.kind === "image";
     return true;
@@ -488,25 +525,48 @@ export default function NotePage() {
       </header>
 
       {entries.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 pt-4 pb-2">
-          <span className="meta">Filter</span>
-          <div className="flex gap-1" role="group" aria-label="Filter entries">
-            {(["all", "text", "images"] as EntryFilter[]).map((option) => {
-              const active = filter === option;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setFilter(option)}
-                  aria-pressed={active}
-                  className={`btn-quiet ${
-                    active ? "bg-[var(--accent-wash)] text-[var(--accent-ink)]" : ""
-                  }`}
-                >
-                  {option === "all" ? "All" : option === "text" ? "Text" : "Images"}
-                </button>
-              );
-            })}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-4 pb-2">
+          <div className="flex items-center gap-3">
+            <span className="meta">Filter</span>
+            <div className="flex gap-1" role="group" aria-label="Filter entries">
+              {(["all", "text", "images"] as EntryFilter[]).map((option) => {
+                const active = filter === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setFilter(option)}
+                    aria-pressed={active}
+                    className={`btn-quiet ${
+                      active ? "bg-[var(--accent-wash)] text-[var(--accent-ink)]" : ""
+                    }`}
+                  >
+                    {option === "all" ? "All" : option === "text" ? "Text" : "Images"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="meta">Sort</span>
+            <div className="flex gap-1" role="group" aria-label="Sort entries">
+              {(["date", "custom"] as const).map((option) => {
+                const active = note?.sort_mode === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setSortMode(option)}
+                    aria-pressed={active}
+                    className={`btn-quiet ${
+                      active ? "bg-[var(--accent-wash)] text-[var(--accent-ink)]" : ""
+                    }`}
+                  >
+                    {option === "date" ? "Date" : "Custom"}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
