@@ -48,6 +48,9 @@ export default function NotePage() {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
 
   const logRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -277,6 +280,61 @@ export default function NotePage() {
     setSavingEdit(false);
   };
 
+  const startEditingTitle = () => {
+    if (!note) return;
+    setTitleDraft(note.title);
+    setEditingTitle(true);
+  };
+
+  const saveTitle = async () => {
+    if (!note) return;
+    const trimmed = titleDraft.trim();
+    if (!trimmed || trimmed === note.title) {
+      setEditingTitle(false);
+      return;
+    }
+    setSavingTitle(true);
+    const supabase = createClient();
+    const { data, error: updateError } = await supabase
+      .from("notes")
+      .update({ title: trimmed, updated_at: new Date().toISOString() })
+      .eq("id", note.id)
+      .select()
+      .single();
+    if (updateError) {
+      setError(`Couldn't rename: ${updateError.message}`);
+      setSavingTitle(false);
+      return;
+    }
+    if (data) {
+      setError(null);
+      setNote(data);
+      setEditingTitle(false);
+    }
+    setSavingTitle(false);
+  };
+
+  const deleteNote = async () => {
+    if (!note) return;
+    if (!confirm("Delete this note and all its entries?")) return;
+    const supabase = createClient();
+
+    const imagePaths = entries
+      .filter((e) => e.kind === "image" && e.image_path)
+      .map((e) => e.image_path as string);
+    if (imagePaths.length > 0) {
+      await supabase.storage.from("note-images").remove(imagePaths);
+    }
+
+    const { error: deleteError } = await supabase.from("notes").delete().eq("id", note.id);
+    if (deleteError) {
+      setError(`Couldn't delete note: ${deleteError.message}`);
+      return;
+    }
+    // Hard-nav so the router forgets this URL entirely.
+    window.location.href = "/notes";
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -341,7 +399,55 @@ export default function NotePage() {
       </nav>
 
       <header className="pb-6 border-b border-[var(--rule-strong)]">
-        <h1 className="page-title">{note.title}</h1>
+        <div className="flex items-start justify-between gap-4">
+          {editingTitle ? (
+            <div className="flex-1 space-y-2">
+              <label htmlFor="note-title" className="sr-only">
+                Note title
+              </label>
+              <input
+                id="note-title"
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    saveTitle();
+                  } else if (e.key === "Escape") {
+                    setEditingTitle(false);
+                  }
+                }}
+                className="field font-serif text-2xl"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={saveTitle}
+                  disabled={savingTitle || !titleDraft.trim()}
+                  className="btn"
+                >
+                  {savingTitle ? "Saving…" : "Save"}
+                </button>
+                <button onClick={() => setEditingTitle(false)} className="btn-quiet">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <h1
+              className="page-title cursor-text hover:text-[var(--accent)] transition-colors"
+              onClick={startEditingTitle}
+              title="Click to rename"
+            >
+              {note.title}
+            </h1>
+          )}
+          {!editingTitle && (
+            <button onClick={deleteNote} className="btn-quiet shrink-0">
+              Delete note
+            </button>
+          )}
+        </div>
         <p className="data mt-3 text-[var(--ink-3)]">
           {entries.length} {entries.length === 1 ? "entry" : "entries"} · updated{" "}
           {new Date(note.updated_at).toLocaleDateString("en-CA", {
