@@ -83,6 +83,7 @@ const SortableEntryRow = ({
 
   return (
     <div
+      id={`entry-${entry.id}`}
       ref={setNodeRef}
       style={style}
       className="group grid grid-cols-[1.5rem_3.5rem_1fr] gap-3"
@@ -457,6 +458,40 @@ export default function NotePage() {
     }
   };
 
+  const toggleFavorite = async (entry: NoteEntry) => {
+    const nextFavorite = !entry.is_favorite;
+    // Optimistic local update so the star and sidebar respond instantly.
+    const nowIso = new Date().toISOString();
+    setEntries((prev) =>
+      prev.map((e) =>
+        e.id === entry.id
+          ? { ...e, is_favorite: nextFavorite, updated_at: nextFavorite ? nowIso : e.updated_at }
+          : e
+      )
+    );
+
+    const supabase = createClient();
+    // Favoriting bumps updated_at so the sidebar sorts most-recently-starred first.
+    // Un-favoriting leaves updated_at alone.
+    const patch = nextFavorite
+      ? { is_favorite: true, updated_at: nowIso }
+      : { is_favorite: false };
+    const { error: updateError } = await supabase
+      .from("note_entries")
+      .update(patch)
+      .eq("id", entry.id);
+
+    if (updateError) {
+      // Revert on failure.
+      setEntries((prev) =>
+        prev.map((e) => (e.id === entry.id ? entry : e))
+      );
+      setError(`Couldn't ${nextFavorite ? "star" : "unstar"} entry: ${updateError.message}`);
+      return;
+    }
+    setError(null);
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id || !note) return;
@@ -796,69 +831,93 @@ export default function NotePage() {
                       timeLabel={formatTime(entry.created_at)}
                       dragDisabled={filter !== "all"}
                     >
-                      {entry.kind === "text" ? (
-                        editingEntryId === entry.id ? (
-                          <div className="space-y-2">
-                            <textarea
-                              value={editDraft}
-                              onChange={(e) => setEditDraft(e.target.value)}
-                              rows={Math.max(2, editDraft.split("\n").length)}
-                              className="field-area w-full font-serif text-sm"
-                              autoFocus
-                            />
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => saveEdit(entry)}
-                                disabled={savingEdit || !editDraft.trim()}
-                                className="btn"
-                              >
-                                {savingEdit ? "Saving…" : "Save"}
-                              </button>
-                              <button onClick={cancelEditing} className="btn-quiet">
-                                Cancel
+                      <div className="flex items-start gap-3">
+                        <div className="min-w-0 flex-1">
+                          {entry.kind === "text" ? (
+                            editingEntryId === entry.id ? (
+                              <div className="space-y-2">
+                                <textarea
+                                  value={editDraft}
+                                  onChange={(e) => setEditDraft(e.target.value)}
+                                  rows={Math.max(2, editDraft.split("\n").length)}
+                                  className="field-area w-full font-serif text-sm"
+                                  autoFocus
+                                />
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => saveEdit(entry)}
+                                    disabled={savingEdit || !editDraft.trim()}
+                                    className="btn"
+                                  >
+                                    {savingEdit ? "Saving…" : "Save"}
+                                  </button>
+                                  <button onClick={cancelEditing} className="btn-quiet">
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="whitespace-pre-wrap break-words text-[var(--ink)]">
+                                {entry.content}
+                                {entry.updated_at !== entry.created_at && (
+                                  <span className="data text-[var(--ink-3)] ml-2">(edited)</span>
+                                )}
+                              </p>
+                            )
+                          ) : entry.image_path && signedUrls[entry.id] ? (
+                            <a
+                              href={signedUrls[entry.id]}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-block"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={signedUrls[entry.id]}
+                                alt=""
+                                className="max-h-[400px] border border-[var(--rule)]"
+                                style={{ borderRadius: "2px" }}
+                              />
+                            </a>
+                          ) : (
+                            <p className="text-[var(--ink-3)] italic text-sm">
+                              [image unavailable]
+                            </p>
+                          )}
+                          {editingEntryId !== entry.id && (
+                            <div className="row-actions mt-1.5 flex gap-3">
+                              {entry.kind === "text" && (
+                                <button onClick={() => startEditing(entry)} className="btn-bare">
+                                  Edit<span className="sr-only"> entry</span>
+                                </button>
+                              )}
+                              <button onClick={() => deleteEntry(entry)} className="btn-bare">
+                                Delete<span className="sr-only"> entry</span>
                               </button>
                             </div>
-                          </div>
-                        ) : (
-                          <p className="whitespace-pre-wrap break-words text-[var(--ink)]">
-                            {entry.content}
-                            {entry.updated_at !== entry.created_at && (
-                              <span className="data text-[var(--ink-3)] ml-2">(edited)</span>
-                            )}
-                          </p>
-                        )
-                      ) : entry.image_path && signedUrls[entry.id] ? (
-                        <a
-                          href={signedUrls[entry.id]}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-block"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={signedUrls[entry.id]}
-                            alt=""
-                            className="max-h-[400px] border border-[var(--rule)]"
-                            style={{ borderRadius: "2px" }}
-                          />
-                        </a>
-                      ) : (
-                        <p className="text-[var(--ink-3)] italic text-sm">
-                          [image unavailable]
-                        </p>
-                      )}
-                      {editingEntryId !== entry.id && (
-                        <div className="row-actions mt-1.5 flex gap-3">
-                          {entry.kind === "text" && (
-                            <button onClick={() => startEditing(entry)} className="btn-bare">
-                              Edit<span className="sr-only"> entry</span>
-                            </button>
                           )}
-                          <button onClick={() => deleteEntry(entry)} className="btn-bare">
-                            Delete<span className="sr-only"> entry</span>
-                          </button>
                         </div>
-                      )}
+                        <button
+                          type="button"
+                          onClick={() => toggleFavorite(entry)}
+                          aria-pressed={entry.is_favorite}
+                          aria-label={entry.is_favorite ? "Remove from favorites" : "Add to favorites"}
+                          className="shrink-0 mt-0.5 text-[var(--ink-3)] hover:text-[var(--ink-2)] transition-colors"
+                        >
+                          <svg
+                            viewBox="0 0 16 16"
+                            width="16"
+                            height="16"
+                            aria-hidden="true"
+                            fill={entry.is_favorite ? "#F5C518" : "none"}
+                            stroke={entry.is_favorite ? "#F5C518" : "currentColor"}
+                            strokeWidth="1.5"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M8 1.5l1.98 4.02 4.44.64-3.21 3.13.76 4.42L8 11.83l-3.97 2.09.76-4.42-3.21-3.13 4.44-.64L8 1.5z" />
+                          </svg>
+                        </button>
+                      </div>
                     </SortableEntryRow>
                   </div>
                 );
