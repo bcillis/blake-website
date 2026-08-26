@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient, Note, NoteEntry } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -13,6 +13,13 @@ const MIME_TO_EXT: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/gif": "gif",
   "image/webp": "webp",
+};
+
+type EntryFilter = "all" | "text" | "images";
+
+const parseFilter = (raw: string | null): EntryFilter => {
+  if (raw === "text" || raw === "images") return raw;
+  return "all";
 };
 
 const formatTime = (iso: string) =>
@@ -35,6 +42,10 @@ export default function NotePage() {
   const params = useParams();
   const { user, loading: authLoading } = useAuth();
   const noteId = params.id as string;
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const filter: EntryFilter = parseFilter(searchParams.get("filter"));
 
   const [note, setNote] = useState<Note | null>(null);
   const [entries, setEntries] = useState<NoteEntry[]>([]);
@@ -335,12 +346,29 @@ export default function NotePage() {
     window.location.href = "/notes";
   };
 
+  const setFilter = (next: EntryFilter) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "all") {
+      params.delete("filter");
+    } else {
+      params.set("filter", next);
+    }
+    const query = params.toString();
+    router.replace(`/notes/${noteId}${query ? `?${query}` : ""}`, { scroll: false });
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendText();
     }
   };
+
+  const visibleEntries = entries.filter((entry) => {
+    if (filter === "text") return entry.kind === "text";
+    if (filter === "images") return entry.kind === "image";
+    return true;
+  });
 
   if (!authLoading && !user) {
     return (
@@ -459,6 +487,30 @@ export default function NotePage() {
         </p>
       </header>
 
+      {entries.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 pt-4 pb-2">
+          <span className="meta">Filter</span>
+          <div className="flex gap-1" role="group" aria-label="Filter entries">
+            {(["all", "text", "images"] as EntryFilter[]).map((option) => {
+              const active = filter === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setFilter(option)}
+                  aria-pressed={active}
+                  className={`btn-quiet ${
+                    active ? "bg-[var(--accent-wash)] text-[var(--accent-ink)]" : ""
+                  }`}
+                >
+                  {option === "all" ? "All" : option === "text" ? "Text" : "Images"}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div
         ref={logRef}
         className="flex-1 overflow-y-auto py-6 space-y-4"
@@ -468,9 +520,13 @@ export default function NotePage() {
           <p className="text-[var(--ink-3)] italic py-16 text-center">
             No entries yet. Type below and press Enter.
           </p>
+        ) : visibleEntries.length === 0 ? (
+          <p className="text-[var(--ink-3)] italic py-16 text-center">
+            {filter === "text" ? "No text entries yet." : "No image entries yet."}
+          </p>
         ) : (
-          entries.map((entry, i) => {
-            const prev = entries[i - 1];
+          visibleEntries.map((entry, i) => {
+            const prev = visibleEntries[i - 1];
             const showDay = !prev || !isSameDay(prev.created_at, entry.created_at);
             return (
               <div key={entry.id}>
