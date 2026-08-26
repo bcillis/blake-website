@@ -337,6 +337,12 @@ html:not(.dark) {
     min-height: 0;
   }
 
+  /* ---------- Entry highlight (favorites sidebar → log jump) ---------- */
+  .entry-highlight {
+    box-shadow: inset 3px 0 0 0 var(--accent);
+    transition: box-shadow 900ms ease-out;
+  }
+
   /* ---------- Alert ---------- */
   .alert {
     border: 1px solid var(--accent);
