@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { createClient, Website } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
-import { hostFromUrl } from "@/lib/url";
+import CardGrid from "@/components/CardGrid";
+import EntryCard from "@/components/EntryCard";
 
 export default function WebsitesPage() {
   const { user } = useAuth();
@@ -112,7 +113,7 @@ export default function WebsitesPage() {
   };
 
   return (
-    <div className="max-w-page mx-auto px-6 pb-24">
+    <div className="max-w-narrow mx-auto px-6 pb-24">
       <header className="pt-16 pb-10">
         <p className="meta mb-5">Index</p>
         <h1 className="page-title mb-5">Websites.</h1>
@@ -200,98 +201,86 @@ export default function WebsitesPage() {
       )}
 
       {loading ? (
-        <div className="index" aria-busy="true">
+        <CardGrid>
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="index-row">
-              <div className="h-5 skeleton w-1/3 mb-2" />
-              <div className="h-3 skeleton w-2/3" />
+            <div key={i} className="entry-card" aria-busy="true">
+              <div className="entry-card-image skeleton" />
+              <div className="entry-card-body">
+                <div className="skeleton h-4 w-2/3" />
+                <div className="skeleton h-3 w-1/2 mt-2" />
+              </div>
             </div>
           ))}
-        </div>
+        </CardGrid>
       ) : filteredWebsites.length === 0 ? (
-        <div className="index">
-          <p className="py-16 text-[var(--ink-3)]">
-            {search ? `No entries match “${search}”.` : "No entries yet."}
-          </p>
+        <div className="py-16 text-center text-[var(--ink-3)]">
+          {search ? <>No entries match &ldquo;{search}&rdquo;.</> : "No entries yet."}
         </div>
       ) : (
-        <ul className="index">
-          {filteredWebsites.map((website) => (
-            <li key={website.id}>
-              {editingId === website.id ? (
-                <form
-                  onSubmit={handleEdit}
-                  className="border-b border-[var(--rule)] py-5 space-y-3"
-                >
-                  <p className="meta">Editing</p>
-                  <input
-                    value={editData.title}
-                    onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                    className="field"
-                    aria-label="Title"
-                    required
-                  />
-                  <textarea
-                    value={editData.description}
-                    onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                    className="field-area min-h-[5rem]"
-                    aria-label="Description"
-                    rows={2}
-                    required
-                  />
-                  <input
-                    value={editData.url}
-                    onChange={(e) => setEditData({ ...editData, url: e.target.value })}
-                    className="field"
-                    aria-label="URL"
-                    type="url"
-                    required
-                  />
-                  <div className="flex gap-2 pt-1">
-                    <button type="submit" className="btn">
-                      Save
-                    </button>
-                    <button type="button" onClick={() => setEditingId(null)} className="btn-quiet">
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <article className="index-row group sm:grid-cols-[1fr_auto] sm:items-baseline">
-                  <div className="min-w-0">
-                    <h2 className="row-title">
-                      <a
-                        href={website.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="stretched-link"
-                      >
-                        {website.title}
-                        <span className="sr-only"> (opens in a new tab)</span>
-                      </a>
-                    </h2>
-                    <p className="text-sm text-[var(--ink-2)] mt-1 max-w-[60ch]">
-                      {website.description}
-                    </p>
-                    {user && (
-                      <div className="row-actions mt-2.5 flex items-center gap-4">
-                        <button onClick={() => startEdit(website)} className="btn-bare">
-                          Edit<span className="sr-only"> {website.title}</span>
-                        </button>
-                        <button onClick={() => handleDelete(website.id)} className="btn-bare">
-                          Delete<span className="sr-only"> {website.title}</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <span className="data shrink-0 sm:text-right group-hover:text-[var(--accent)] transition-colors">
-                    {hostFromUrl(website.url)}
-                  </span>
-                </article>
-              )}
-            </li>
-          ))}
-        </ul>
+        <CardGrid>
+          {filteredWebsites.map((website) =>
+            editingId === website.id ? (
+              <form
+                key={website.id}
+                onSubmit={handleEdit}
+                className="border border-[var(--rule-strong)] bg-[var(--surface)] p-3 space-y-2 col-span-full"
+              >
+                <p className="meta">Editing</p>
+                <input
+                  value={editData.title}
+                  onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                  className="field"
+                  aria-label="Title"
+                  required
+                />
+                <textarea
+                  value={editData.description}
+                  onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                  className="field-area min-h-[5rem]"
+                  aria-label="Description"
+                  rows={2}
+                  required
+                />
+                <input
+                  value={editData.url}
+                  onChange={(e) => setEditData({ ...editData, url: e.target.value })}
+                  className="field"
+                  aria-label="URL"
+                  type="url"
+                  required
+                />
+                <div className="flex gap-2 pt-1">
+                  <button type="submit" className="btn">
+                    Save
+                  </button>
+                  <button type="button" onClick={() => setEditingId(null)} className="btn-quiet">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <EntryCard
+                key={website.id}
+                title={website.title}
+                href={website.url}
+                imagePath={website.image_path}
+                body={<p className="entry-card-desc">{website.description}</p>}
+                ownerControls={
+                  user ? (
+                    <>
+                      <button onClick={() => startEdit(website)}>
+                        edit<span className="sr-only"> {website.title}</span>
+                      </button>
+                      <button onClick={() => handleDelete(website.id)}>
+                        del<span className="sr-only"> {website.title}</span>
+                      </button>
+                    </>
+                  ) : undefined
+                }
+              />
+            )
+          )}
+        </CardGrid>
       )}
     </div>
   );
