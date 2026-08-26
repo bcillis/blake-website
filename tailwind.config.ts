@@ -35,6 +35,7 @@ const config: Config = {
       maxWidth: {
         page: "1080px",
         text: "68ch",
+        narrow: "800px",
       },
     },
   },
