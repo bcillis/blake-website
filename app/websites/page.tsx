@@ -3,15 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { createClient, Website } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
-
-/** Bare domain, used as the right-hand column of each index row. */
-const hostFromUrl = (url: string) => {
-  try {
-    return new URL(url).host.replace(/^www\./, "");
-  } catch {
-    return url.replace(/^https?:\/\//, "").replace(/^www\./, "");
-  }
-};
+import { hostFromUrl } from "@/lib/url";
 
 export default function WebsitesPage() {
   const { user } = useAuth();

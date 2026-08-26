@@ -3,18 +3,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { createClient, WishlistItem } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
+import { hostFromUrl } from "@/lib/url";
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(price);
-
-/** Bare domain, shown under the title so you can see where it's from. */
-const hostFromUrl = (url: string) => {
-  try {
-    return new URL(url).host.replace(/^www\./, "");
-  } catch {
-    return url.replace(/^https?:\/\//, "").replace(/^www\./, "");
-  }
-};
 
 type SortKey = "date" | "alpha" | "price";
 
