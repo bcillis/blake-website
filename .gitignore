@@ -32,3 +32,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .claude/launch.json
+
+# superpowers brainstorming mockups
+.superpowers/
