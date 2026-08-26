@@ -15,6 +15,7 @@ export interface Website {
   url: string;
   user_id: string;
   created_at: string;
+  image_path: string | null;
 }
 
 export interface Guide {
@@ -45,6 +46,7 @@ export interface WishlistItem {
   link: string;
   user_id: string;
   created_at: string;
+  image_path: string | null;
 }
 
 export interface Note {
