@@ -39,7 +39,7 @@ const parseFilter = (raw: string | null): EntryFilter => {
 };
 
 const formatTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString("en-CA", { hour: "2-digit", minute: "2-digit", hour12: false });
+  new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 
 const formatDayLabel = (iso: string) =>
   new Date(iso).toLocaleDateString("en-CA", { year: "numeric", month: "long", day: "numeric" });
@@ -87,7 +87,7 @@ const SortableEntryRow = ({
       id={`entry-${entry.id}`}
       ref={setNodeRef}
       style={style}
-      className="group grid grid-cols-[2.25rem_1fr] gap-3"
+      className="group grid grid-cols-[3.75rem_1fr] gap-3"
     >
       <div className="flex flex-col items-center pt-0.5">
         <button

@@ -10,10 +10,10 @@ const formatSidebarTimestamp = (iso: string): string => {
     then.getFullYear() === now.getFullYear() &&
     then.getMonth() === now.getMonth() &&
     then.getDate() === now.getDate();
-  const time = then.toLocaleTimeString("en-CA", {
-    hour: "2-digit",
+  const time = then.toLocaleTimeString("en-US", {
+    hour: "numeric",
     minute: "2-digit",
-    hour12: false,
+    hour12: true,
   });
   if (sameDay) return `Today · ${time}`;
   const date = then.toLocaleDateString("en-CA", {
