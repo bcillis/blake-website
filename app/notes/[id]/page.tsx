@@ -5,6 +5,21 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient, Note, NoteEntry } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const IMAGE_URL_TTL_SECONDS = 60 * 60;
 
@@ -38,6 +53,70 @@ const isSameDay = (a: string, b: string) => {
   );
 };
 
+type SortableEntryRowProps = {
+  entry: NoteEntry;
+  timeLabel: string;
+  dragDisabled: boolean;
+  children: React.ReactNode;
+};
+
+const SortableEntryRow = ({
+  entry,
+  timeLabel,
+  dragDisabled,
+  children,
+}: SortableEntryRowProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: entry.id, disabled: dragDisabled });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group grid grid-cols-[1.5rem_3.5rem_1fr] gap-3"
+    >
+      <button
+        type="button"
+        aria-label="Reorder entry"
+        {...(dragDisabled ? {} : attributes)}
+        {...(dragDisabled ? {} : listeners)}
+        aria-disabled={dragDisabled}
+        className={`self-start pt-1 text-[var(--ink-3)] ${
+          dragDisabled ? "opacity-30 cursor-not-allowed" : "cursor-grab active:cursor-grabbing hover:text-[var(--ink-2)]"
+        }`}
+      >
+        <svg viewBox="0 0 12 16" width="12" height="16" aria-hidden="true">
+          <circle cx="3" cy="3" r="1.2" fill="currentColor" />
+          <circle cx="9" cy="3" r="1.2" fill="currentColor" />
+          <circle cx="3" cy="8" r="1.2" fill="currentColor" />
+          <circle cx="9" cy="8" r="1.2" fill="currentColor" />
+          <circle cx="3" cy="13" r="1.2" fill="currentColor" />
+          <circle cx="9" cy="13" r="1.2" fill="currentColor" />
+        </svg>
+      </button>
+      <time
+        dateTime={entry.created_at}
+        className="data text-[var(--ink-3)] pt-0.5"
+      >
+        {timeLabel}
+      </time>
+      <div className="min-w-0">{children}</div>
+    </div>
+  );
+};
+
 export default function NotePage() {
   const params = useParams();
   const { user, loading: authLoading } = useAuth();
@@ -62,6 +141,11 @@ export default function NotePage() {
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const logRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -373,6 +457,108 @@ export default function NotePage() {
     }
   };
 
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !note) return;
+
+    // Compute the moved entry's new position based on its new neighbors
+    // in the currently-visible order.
+    const oldIndex = visibleEntries.findIndex((e) => e.id === active.id);
+    const newIndex = visibleEntries.findIndex((e) => e.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = [...visibleEntries];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+
+    const supabase = createClient();
+
+    // Lazy backfill: if any position in this note is null, assign positions
+    // to every entry in current chronological order, then continue.
+    const anyNull = entries.some((e) => e.position == null);
+    let backfilledEntries = entries;
+    if (anyNull) {
+      const byDate = [...entries].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      backfilledEntries = byDate.map((e, i) => ({ ...e, position: i + 1 }));
+      const backfillRows = backfilledEntries.map((e) => ({
+        id: e.id,
+        note_id: e.note_id,
+        user_id: e.user_id,
+        kind: e.kind,
+        position: e.position,
+      }));
+      const { error: backfillError } = await supabase
+        .from("note_entries")
+        .upsert(backfillRows, { onConflict: "id" });
+      if (backfillError) {
+        setError(`Couldn't save order: ${backfillError.message}`);
+        return;
+      }
+      setEntries(backfilledEntries);
+    }
+
+    // Recompute the reordered list against the (possibly) backfilled entries
+    // so that `moved` carries a non-null position for neighbor math below.
+    const currentSource = anyNull ? backfilledEntries : entries;
+    const currentVisible = currentSource.filter((entry) => {
+      if (filter === "text") return entry.kind === "text";
+      if (filter === "images") return entry.kind === "image";
+      return true;
+    });
+    const currentReordered = [...currentVisible];
+    const currentOld = currentReordered.findIndex((e) => e.id === active.id);
+    const currentNew = currentReordered.findIndex((e) => e.id === over.id);
+    const [currentMoved] = currentReordered.splice(currentOld, 1);
+    currentReordered.splice(currentNew, 0, currentMoved);
+
+    const prev = currentReordered[currentNew - 1];
+    const next = currentReordered[currentNew + 1];
+    let newPosition: number;
+    if (prev && next && prev.position != null && next.position != null) {
+      newPosition = (prev.position + next.position) / 2;
+    } else if (prev && prev.position != null) {
+      newPosition = prev.position + 1;
+    } else if (next && next.position != null) {
+      newPosition = next.position - 1;
+    } else {
+      newPosition = 1;
+    }
+
+    // Optimistic local update.
+    const updatedEntries = currentSource.map((e) =>
+      e.id === active.id ? { ...e, position: newPosition } : e
+    );
+    setEntries(updatedEntries);
+
+    const { error: updateError } = await supabase
+      .from("note_entries")
+      .update({ position: newPosition })
+      .eq("id", active.id);
+    if (updateError) {
+      // Revert on failure.
+      setEntries(currentSource);
+      setError(`Couldn't save order: ${updateError.message}`);
+      return;
+    }
+    setError(null);
+
+    // Auto-flip sort to custom if we weren't already there.
+    if (note.sort_mode !== "custom") {
+      setNote({ ...note, sort_mode: "custom" });
+      const { error: sortError } = await supabase
+        .from("notes")
+        .update({ sort_mode: "custom" })
+        .eq("id", note.id);
+      if (sortError) {
+        // Non-fatal: the position was saved. Log to console for diagnosis.
+        // Reverting the position now would be more disruptive than leaving it.
+        console.warn("Failed to flip sort mode to custom:", sortError.message);
+      }
+    }
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -568,111 +754,119 @@ export default function NotePage() {
               })}
             </div>
           </div>
+          {filter !== "all" && (
+            <p className="meta text-[var(--ink-3)]" aria-live="polite">
+              Clear filter to reorder.
+            </p>
+          )}
         </div>
       )}
 
-      <div
-        ref={logRef}
-        className="flex-1 overflow-y-auto py-6 space-y-4"
-        aria-live="polite"
-      >
-        {entries.length === 0 ? (
-          <p className="text-[var(--ink-3)] italic py-16 text-center">
-            No entries yet. Type below and press Enter.
-          </p>
-        ) : visibleEntries.length === 0 ? (
-          <p className="text-[var(--ink-3)] italic py-16 text-center">
-            {filter === "text" ? "No text entries yet." : "No image entries yet."}
-          </p>
-        ) : (
-          visibleEntries.map((entry, i) => {
-            const prev = visibleEntries[i - 1];
-            const showDay = !prev || !isSameDay(prev.created_at, entry.created_at);
-            return (
-              <div key={entry.id}>
-                {showDay && (
-                  <p className="meta py-2 border-b border-[var(--rule)] mb-3">
-                    {formatDayLabel(entry.created_at)}
-                  </p>
-                )}
-                <div className="group grid grid-cols-[3.5rem_1fr] gap-3">
-                  <time
-                    dateTime={entry.created_at}
-                    className="data text-[var(--ink-3)] pt-0.5"
-                  >
-                    {formatTime(entry.created_at)}
-                  </time>
-                  <div className="min-w-0">
-                    {entry.kind === "text" ? (
-                      editingEntryId === entry.id ? (
-                        <div className="space-y-2">
-                          <textarea
-                            value={editDraft}
-                            onChange={(e) => setEditDraft(e.target.value)}
-                            rows={Math.max(2, editDraft.split("\n").length)}
-                            className="field-area w-full font-serif text-sm"
-                            autoFocus
-                          />
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => saveEdit(entry)}
-                              disabled={savingEdit || !editDraft.trim()}
-                              className="btn"
-                            >
-                              {savingEdit ? "Saving…" : "Save"}
-                            </button>
-                            <button onClick={cancelEditing} className="btn-quiet">
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="whitespace-pre-wrap break-words text-[var(--ink)]">
-                          {entry.content}
-                          {entry.updated_at !== entry.created_at && (
-                            <span className="data text-[var(--ink-3)] ml-2">(edited)</span>
-                          )}
-                        </p>
-                      )
-                    ) : entry.image_path && signedUrls[entry.id] ? (
-                      <a
-                        href={signedUrls[entry.id]}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-block"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={signedUrls[entry.id]}
-                          alt=""
-                          className="max-h-[400px] border border-[var(--rule)]"
-                          style={{ borderRadius: "2px" }}
-                        />
-                      </a>
-                    ) : (
-                      <p className="text-[var(--ink-3)] italic text-sm">
-                        [image unavailable]
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        <div
+          ref={logRef}
+          className="flex-1 overflow-y-auto py-6 space-y-4"
+          aria-live="polite"
+        >
+          {entries.length === 0 ? (
+            <p className="text-[var(--ink-3)] italic py-16 text-center">
+              No entries yet. Type below and press Enter.
+            </p>
+          ) : visibleEntries.length === 0 ? (
+            <p className="text-[var(--ink-3)] italic py-16 text-center">
+              {filter === "text" ? "No text entries yet." : "No image entries yet."}
+            </p>
+          ) : (
+            <SortableContext
+              items={visibleEntries.map((e) => e.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {visibleEntries.map((entry, i) => {
+                const prev = visibleEntries[i - 1];
+                const showDay = !prev || !isSameDay(prev.created_at, entry.created_at);
+                return (
+                  <div key={entry.id}>
+                    {showDay && (
+                      <p className="meta py-2 border-b border-[var(--rule)] mb-3">
+                        {formatDayLabel(entry.created_at)}
                       </p>
                     )}
-                    {editingEntryId !== entry.id && (
-                      <div className="row-actions mt-1.5 flex gap-3">
-                        {entry.kind === "text" && (
-                          <button onClick={() => startEditing(entry)} className="btn-bare">
-                            Edit<span className="sr-only"> entry</span>
+                    <SortableEntryRow
+                      entry={entry}
+                      timeLabel={formatTime(entry.created_at)}
+                      dragDisabled={filter !== "all"}
+                    >
+                      {entry.kind === "text" ? (
+                        editingEntryId === entry.id ? (
+                          <div className="space-y-2">
+                            <textarea
+                              value={editDraft}
+                              onChange={(e) => setEditDraft(e.target.value)}
+                              rows={Math.max(2, editDraft.split("\n").length)}
+                              className="field-area w-full font-serif text-sm"
+                              autoFocus
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => saveEdit(entry)}
+                                disabled={savingEdit || !editDraft.trim()}
+                                className="btn"
+                              >
+                                {savingEdit ? "Saving…" : "Save"}
+                              </button>
+                              <button onClick={cancelEditing} className="btn-quiet">
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="whitespace-pre-wrap break-words text-[var(--ink)]">
+                            {entry.content}
+                            {entry.updated_at !== entry.created_at && (
+                              <span className="data text-[var(--ink-3)] ml-2">(edited)</span>
+                            )}
+                          </p>
+                        )
+                      ) : entry.image_path && signedUrls[entry.id] ? (
+                        <a
+                          href={signedUrls[entry.id]}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-block"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={signedUrls[entry.id]}
+                            alt=""
+                            className="max-h-[400px] border border-[var(--rule)]"
+                            style={{ borderRadius: "2px" }}
+                          />
+                        </a>
+                      ) : (
+                        <p className="text-[var(--ink-3)] italic text-sm">
+                          [image unavailable]
+                        </p>
+                      )}
+                      {editingEntryId !== entry.id && (
+                        <div className="row-actions mt-1.5 flex gap-3">
+                          {entry.kind === "text" && (
+                            <button onClick={() => startEditing(entry)} className="btn-bare">
+                              Edit<span className="sr-only"> entry</span>
+                            </button>
+                          )}
+                          <button onClick={() => deleteEntry(entry)} className="btn-bare">
+                            Delete<span className="sr-only"> entry</span>
                           </button>
-                        )}
-                        <button onClick={() => deleteEntry(entry)} className="btn-bare">
-                          Delete<span className="sr-only"> entry</span>
-                        </button>
-                      </div>
-                    )}
+                        </div>
+                      )}
+                    </SortableEntryRow>
                   </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
+                );
+              })}
+            </SortableContext>
+          )}
+        </div>
+      </DndContext>
 
       {error && (
         <div role="alert" className="alert mb-3">
