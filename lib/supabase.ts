@@ -64,6 +64,7 @@ export interface NoteEntry {
   content: string | null;
   image_path: string | null;
   position: number | null;
+  is_favorite: boolean;
   created_at: string;
   updated_at: string;
 }
