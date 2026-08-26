@@ -20,6 +20,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { FavoritesSidebar } from "./FavoritesSidebar";
 
 const IMAGE_URL_TTL_SECONDS = 60 * 60;
 
@@ -745,6 +746,14 @@ export default function NotePage() {
         </p>
       </header>
 
+      <FavoritesSidebar
+        variant="mobile"
+        favorites={[]}
+        signedUrls={signedUrls}
+        onScrollToEntry={() => {}}
+        onUnstar={() => {}}
+      />
+
       {entries.length > 0 && (
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pt-4 pb-2">
           <div className="flex items-center gap-3">
@@ -963,15 +972,13 @@ export default function NotePage() {
       </div>
       </div>
 
-      <aside
-        aria-label="Favorites"
-        className="hidden lg:block lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto pt-12"
-      >
-        <p className="meta mb-3">Favorites</p>
-        <p className="text-sm text-[var(--ink-3)]">
-          Favorites will live here.
-        </p>
-      </aside>
+      <FavoritesSidebar
+        variant="desktop"
+        favorites={[]}
+        signedUrls={signedUrls}
+        onScrollToEntry={() => {}}
+        onUnstar={() => {}}
+      />
     </div>
   );
 }
