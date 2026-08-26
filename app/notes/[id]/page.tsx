@@ -87,33 +87,35 @@ const SortableEntryRow = ({
       id={`entry-${entry.id}`}
       ref={setNodeRef}
       style={style}
-      className="group grid grid-cols-[1.5rem_3.5rem_1fr] gap-3"
+      className="group grid grid-cols-[2.25rem_1fr] gap-3"
     >
-      <button
-        type="button"
-        aria-label="Reorder entry"
-        {...(dragDisabled ? {} : attributes)}
-        {...(dragDisabled ? {} : listeners)}
-        aria-disabled={dragDisabled}
-        className={`self-start pt-1 text-[var(--ink-3)] ${
-          dragDisabled ? "opacity-30 cursor-not-allowed" : "cursor-grab active:cursor-grabbing hover:text-[var(--ink-2)]"
-        }`}
-      >
-        <svg viewBox="0 0 12 16" width="12" height="16" aria-hidden="true">
-          <circle cx="3" cy="3" r="1.2" fill="currentColor" />
-          <circle cx="9" cy="3" r="1.2" fill="currentColor" />
-          <circle cx="3" cy="8" r="1.2" fill="currentColor" />
-          <circle cx="9" cy="8" r="1.2" fill="currentColor" />
-          <circle cx="3" cy="13" r="1.2" fill="currentColor" />
-          <circle cx="9" cy="13" r="1.2" fill="currentColor" />
-        </svg>
-      </button>
-      <time
-        dateTime={entry.created_at}
-        className="data text-[var(--ink-3)] pt-0.5"
-      >
-        {timeLabel}
-      </time>
+      <div className="flex flex-col items-center pt-0.5">
+        <time
+          dateTime={entry.created_at}
+          className="data text-[11px] text-[var(--ink-3)] leading-none mb-1"
+        >
+          {timeLabel}
+        </time>
+        <button
+          type="button"
+          aria-label="Reorder entry"
+          {...(dragDisabled ? {} : attributes)}
+          {...(dragDisabled ? {} : listeners)}
+          aria-disabled={dragDisabled}
+          className={`text-[var(--ink-3)] ${
+            dragDisabled ? "opacity-30 cursor-not-allowed" : "cursor-grab active:cursor-grabbing hover:text-[var(--ink-2)]"
+          }`}
+        >
+          <svg viewBox="0 0 12 16" width="12" height="16" aria-hidden="true">
+            <circle cx="3" cy="3" r="1.2" fill="currentColor" />
+            <circle cx="9" cy="3" r="1.2" fill="currentColor" />
+            <circle cx="3" cy="8" r="1.2" fill="currentColor" />
+            <circle cx="9" cy="8" r="1.2" fill="currentColor" />
+            <circle cx="3" cy="13" r="1.2" fill="currentColor" />
+            <circle cx="9" cy="13" r="1.2" fill="currentColor" />
+          </svg>
+        </button>
+      </div>
       <div className="min-w-0">{children}</div>
     </div>
   );
@@ -980,7 +982,7 @@ export default function NotePage() {
         </div>
       )}
 
-      <div className="sticky bottom-0 bg-[var(--bg)] border-t border-[var(--rule)] pt-3 pb-4">
+      <div className="sticky bottom-0 z-10 bg-[var(--bg)] border-t border-[var(--rule)] pt-3 pb-4">
         <label htmlFor="note-input" className="sr-only">
           New entry
         </label>
