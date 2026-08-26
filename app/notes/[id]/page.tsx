@@ -45,6 +45,9 @@ export default function NotePage() {
   const [sending, setSending] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const logRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -238,6 +241,42 @@ export default function NotePage() {
     });
   };
 
+  const startEditing = (entry: NoteEntry) => {
+    if (entry.kind !== "text") return;
+    setEditingEntryId(entry.id);
+    setEditDraft(entry.content ?? "");
+  };
+
+  const cancelEditing = () => {
+    setEditingEntryId(null);
+    setEditDraft("");
+  };
+
+  const saveEdit = async (entry: NoteEntry) => {
+    const trimmed = editDraft.trim();
+    if (!trimmed) return;
+    setSavingEdit(true);
+    const supabase = createClient();
+    const { data, error: updateError } = await supabase
+      .from("note_entries")
+      .update({ content: trimmed, updated_at: new Date().toISOString() })
+      .eq("id", entry.id)
+      .select()
+      .single();
+    if (updateError) {
+      setError(`Couldn't save edit: ${updateError.message}`);
+      setSavingEdit(false);
+      return;
+    }
+    if (data) {
+      setError(null);
+      setEntries((prev) => prev.map((e) => (e.id === data.id ? data : e)));
+      setEditingEntryId(null);
+      setEditDraft("");
+    }
+    setSavingEdit(false);
+  };
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -342,9 +381,36 @@ export default function NotePage() {
                   </time>
                   <div className="min-w-0">
                     {entry.kind === "text" ? (
-                      <p className="whitespace-pre-wrap break-words text-[var(--ink)]">
-                        {entry.content}
-                      </p>
+                      editingEntryId === entry.id ? (
+                        <div className="space-y-2">
+                          <textarea
+                            value={editDraft}
+                            onChange={(e) => setEditDraft(e.target.value)}
+                            rows={Math.max(2, editDraft.split("\n").length)}
+                            className="field-area w-full font-serif text-sm"
+                            autoFocus
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => saveEdit(entry)}
+                              disabled={savingEdit || !editDraft.trim()}
+                              className="btn"
+                            >
+                              {savingEdit ? "Saving…" : "Save"}
+                            </button>
+                            <button onClick={cancelEditing} className="btn-quiet">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap break-words text-[var(--ink)]">
+                          {entry.content}
+                          {entry.updated_at !== entry.created_at && (
+                            <span className="data text-[var(--ink-3)] ml-2">(edited)</span>
+                          )}
+                        </p>
+                      )
                     ) : entry.image_path && signedUrls[entry.id] ? (
                       <a
                         href={signedUrls[entry.id]}
@@ -365,11 +431,18 @@ export default function NotePage() {
                         [image unavailable]
                       </p>
                     )}
-                    <div className="row-actions mt-1.5">
-                      <button onClick={() => deleteEntry(entry)} className="btn-bare">
-                        Delete<span className="sr-only"> entry</span>
-                      </button>
-                    </div>
+                    {editingEntryId !== entry.id && (
+                      <div className="row-actions mt-1.5 flex gap-3">
+                        {entry.kind === "text" && (
+                          <button onClick={() => startEditing(entry)} className="btn-bare">
+                            Edit<span className="sr-only"> entry</span>
+                          </button>
+                        )}
+                        <button onClick={() => deleteEntry(entry)} className="btn-bare">
+                          Delete<span className="sr-only"> entry</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
