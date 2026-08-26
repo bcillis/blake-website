@@ -53,6 +53,7 @@ export interface Note {
   user_id: string;
   created_at: string;
   updated_at: string;
+  sort_mode: "date" | "custom";
 }
 
 export interface NoteEntry {
@@ -62,6 +63,7 @@ export interface NoteEntry {
   kind: "text" | "image";
   content: string | null;
   image_path: string | null;
+  position: number | null;
   created_at: string;
   updated_at: string;
 }
