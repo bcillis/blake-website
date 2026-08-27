@@ -7,20 +7,21 @@ import { useAuth } from "./AuthProvider";
 import ThemeToggle from "./ThemeToggle";
 import PushLink from "./PushLink";
 
+// `private: true` links only render when a user is signed in. Websites,
+// Guides, Wishlist, and Notes are all owner-only reads under RLS.
 const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/websites", label: "Websites" },
-  { href: "/journey", label: "Journey" },
-  { href: "/guides", label: "Guides" },
-  { href: "/wishlist", label: "Wishlist" },
+  { href: "/", label: "Home", private: false },
+  { href: "/websites", label: "Websites", private: true },
+  { href: "/journey", label: "Journey", private: false },
+  { href: "/guides", label: "Guides", private: true },
+  { href: "/wishlist", label: "Wishlist", private: true },
+  { href: "/notes", label: "Notes", private: true },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, loading, signOut } = useAuth();
-  const visibleNavLinks = user
-    ? [...navLinks, { href: "/notes", label: "Notes" }]
-    : navLinks;
+  const visibleNavLinks = navLinks.filter((link) => !link.private || user);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 

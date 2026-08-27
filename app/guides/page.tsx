@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient, Guide } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
+import SignInRequired from "@/components/SignInRequired";
 
 /** Lowercase, URL-safe slug. Lookups use `.eq("slug", …)`, which is case-sensitive. */
 const slugify = (value: string) =>
@@ -25,7 +26,7 @@ const formatDate = (value: string) =>
   new Date(value).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" });
 
 export default function GuidesPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [guides, setGuides] = useState<Guide[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,8 +36,15 @@ export default function GuidesPage() {
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      // Table is owner-only under RLS now — no fetch, no list.
+      setGuides([]);
+      setLoading(false);
+      return;
+    }
     fetchGuides();
-  }, [user]);
+  }, [user, authLoading]);
 
   const fetchGuides = async () => {
     const supabase = createClient();
@@ -101,6 +109,10 @@ export default function GuidesPage() {
         </p>
       </header>
 
+      {!authLoading && !user ? (
+        <SignInRequired label="The guides list" />
+      ) : (
+      <>
       <div className="flex items-center justify-between gap-3 pb-4">
         <span className="meta">
           {String(guides.length).padStart(2, "0")} {guides.length === 1 ? "guide" : "guides"}
@@ -212,6 +224,8 @@ export default function GuidesPage() {
             );
           })}
         </ol>
+      )}
+      </>
       )}
     </div>
   );

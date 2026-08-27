@@ -5,9 +5,10 @@ import { createClient, Website } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import CardGrid from "@/components/CardGrid";
 import LinkCard from "@/components/LinkCard";
+import SignInRequired from "@/components/SignInRequired";
 
 export default function WebsitesPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [websites, setWebsites] = useState<Website[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -30,8 +31,15 @@ export default function WebsitesPage() {
   const [addRowId, setAddRowId] = useState<string>(() => crypto.randomUUID());
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      // Table is owner-only under RLS now — no fetch, no list.
+      setWebsites([]);
+      setLoading(false);
+      return;
+    }
     fetchWebsites();
-  }, [user]);
+  }, [user, authLoading]);
 
   const fetchWebsites = async () => {
     const supabase = createClient();
@@ -194,6 +202,10 @@ export default function WebsitesPage() {
         </p>
       </header>
 
+      {!authLoading && !user ? (
+        <SignInRequired label="The websites list" />
+      ) : (
+      <>
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 pb-4">
         <label htmlFor="site-search" className="sr-only">
           Search websites
@@ -417,6 +429,8 @@ export default function WebsitesPage() {
             )
           )}
         </CardGrid>
+      )}
+      </>
       )}
     </div>
   );

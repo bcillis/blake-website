@@ -19,13 +19,13 @@ When the schema changes, the canonical SQL lives in `supabase-schema.sql` and mu
 
 ## Architecture
 
-BlakeHub is a Next.js 14 App Router site (TypeScript + Tailwind) backed by Supabase. It is a single-author personal knowledge base with public read access and a single owner who can write. There is no API layer — every page is a `"use client"` component that talks to Supabase directly via the anon key.
+BlakeHub is a Next.js 14 App Router site (TypeScript + Tailwind) backed by Supabase. It is a single-author personal knowledge base with a single owner who can write. **Only Home and Journey are public**; Websites, Guides, Wishlist, and Notes are all owner-only reads under RLS. There is no API layer — every page is a `"use client"` component that talks to Supabase directly via the anon key.
 
 ### Auth & write model
 
 - `lib/supabase.ts` exports `createClient()` (a `createBrowserClient` from `@supabase/ssr`) plus the row types (`Website`, `Guide`, `CourseNote`, `WishlistItem`). All callers create a fresh client per call.
 - `components/AuthProvider.tsx` wraps the tree, exposes `useAuth()` (`user`, `loading`, `signOut`), and listens to `onAuthStateChange`. The owner signs in at `/login` with email/password; there is no signup flow — the user is created manually in the Supabase dashboard.
-- Authorization is enforced entirely by Postgres RLS (see `supabase-schema.sql`): everyone can `select`, but `insert`/`update`/`delete` require `auth.uid() = user_id`. Pages mirror this in the UI by gating buttons on `user`. Don't add server-side auth checks — there is no server.
+- Authorization is enforced entirely by Postgres RLS (see `supabase-schema.sql`). `course_notes` (Journey) is public-read; every other table requires `auth.uid() = user_id` for `select`, `insert`, `update`, and `delete`. Private pages gate their fetch on `user` and swap the body for `<SignInRequired>` when logged out. Don't add server-side auth checks — there is no server.
 
 ### Data shape
 

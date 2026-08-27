@@ -7,10 +7,11 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { createClient, Guide } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
+import SignInRequired from "@/components/SignInRequired";
 
 export default function GuidePage() {
   const params = useParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const slug = params.slug as string;
 
   const [guide, setGuide] = useState<Guide | null>(null);
@@ -23,6 +24,13 @@ export default function GuidePage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      // Table is owner-only under RLS now — no fetch.
+      setGuide(null);
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     const fetchGuide = async () => {
       const supabase = createClient();
@@ -34,13 +42,16 @@ export default function GuidePage() {
         .maybeSingle();
       if (cancelled) return;
       setGuide(data);
+      // Set the browser tab title client-side — the layout's server-side
+      // generateMetadata can't read guides under owner-only RLS.
+      if (data) document.title = `${data.title} — BlakeHub`;
       setLoading(false);
     };
     fetchGuide();
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+  }, [slug, user, authLoading]);
 
   const startEditing = () => {
     if (!guide) return;
@@ -85,6 +96,16 @@ export default function GuidePage() {
         <div className="h-9 skeleton w-2/3 mb-6" />
         <div className="h-4 skeleton w-full mb-2.5" />
         <div className="h-4 skeleton w-5/6" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-text mx-auto px-6 pt-20 pb-24">
+        <p className="meta mb-5">Private</p>
+        <h1 className="page-title mb-8">Guide.</h1>
+        <SignInRequired label="This guide" />
       </div>
     );
   }

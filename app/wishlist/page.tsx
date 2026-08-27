@@ -5,6 +5,7 @@ import { createClient, WishlistItem } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import CardGrid from "@/components/CardGrid";
 import LinkCard from "@/components/LinkCard";
+import SignInRequired from "@/components/SignInRequired";
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(price);
@@ -18,7 +19,7 @@ const sortLabels: Record<SortKey, string> = {
 };
 
 export default function WishlistPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("date");
@@ -42,8 +43,15 @@ export default function WishlistPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      // Table is owner-only under RLS now — no fetch, no list.
+      setItems([]);
+      setLoading(false);
+      return;
+    }
     fetchItems();
-  }, [user]);
+  }, [user, authLoading]);
 
   const fetchItems = async () => {
     const supabase = createClient();
@@ -218,6 +226,10 @@ export default function WishlistPage() {
         <p className="lead">Gear and gadgets I&apos;d like to own, with prices in CAD.</p>
       </header>
 
+      {!authLoading && !user ? (
+        <SignInRequired label="The wishlist" />
+      ) : (
+      <>
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 pb-4">
         <label htmlFor="wish-search" className="sr-only">
           Search wishlist
@@ -493,6 +505,8 @@ export default function WishlistPage() {
             </span>
           </div>
         </>
+      )}
+      </>
       )}
     </div>
   );

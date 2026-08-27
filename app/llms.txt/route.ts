@@ -1,4 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
 import { SITE_URL, SITE_NAME, absoluteUrl } from "@/lib/site";
 
 export const revalidate = 3600;
@@ -7,44 +6,24 @@ export const revalidate = 3600;
  * llms.txt — a curated plain-text summary for language models, so they can
  * describe the site accurately without scraping every route.
  * Spec: https://llmstxt.org
+ *
+ * Only public sections are listed. Websites, Guides, and Wishlist are
+ * owner-only (RLS-gated) so mentioning them here would just point crawlers
+ * at a sign-in wall.
  */
-export async function GET() {
-  let guideLines = "";
-  try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data } = await supabase.from("guides").select("title, slug");
-    if (data?.length) {
-      guideLines = data
-        .map((g) => `- [${g.title}](${absoluteUrl(`/guides/${g.slug}`)})`)
-        .join("\n");
-    }
-  } catch {
-    // Fall through to the static section list.
-  }
-
+export function GET() {
   const body = `# ${SITE_NAME}
 
 > A personal knowledge base written and maintained by Blake, a Software
-> Engineering graduate of Western University (2022–2026). Everything here is
-> first-hand: links actually used, courses actually taken, notes actually
-> written. Public to read, single-author to write.
+> Engineering graduate of Western University (2022–2026). Public sections
+> are read-only; the private sections behind sign-in are not intended for
+> crawlers or third parties.
 
 ## Sections
 
-- [Websites](${absoluteUrl("/websites")}): an index of tools and resources
-  collected while studying and building software, each with a short note.
 - [Journey](${absoluteUrl("/journey")}): the full four-year Western University
   Software Engineering curriculum, course by course and term by term, with
   per-course notes and attached files.
-- [Guides](${absoluteUrl("/guides")}): long-form written references for tools
-  and technologies, authored in Markdown.
-- [Wishlist](${absoluteUrl("/wishlist")}): gear and gadgets on my radar, in CAD.
-
-## Guides
-${guideLines || "- (No guides published yet.)"}
 
 ## Notes for models
 

@@ -78,7 +78,9 @@ create index if not exists note_entries_note_id_created_at_idx
 
 -- =============================================================
 -- Row Level Security (RLS) Policies
--- Everyone can READ, only the owner can WRITE
+-- course_notes is public-read (Journey stays open to anyone).
+-- websites, guides, wishlist, notes, note_entries are all
+-- owner-only for BOTH read and write.
 -- =============================================================
 
 -- Enable RLS on all tables (no-op if already enabled)
@@ -89,14 +91,15 @@ alter table public.wishlist      enable row level security;
 alter table public.notes         enable row level security;
 alter table public.note_entries  enable row level security;
 
--- Websites policies
+-- Websites policies (owner-only for ALL operations)
 drop policy if exists "Anyone can view websites"                  on public.websites;
+drop policy if exists "Owners can view their websites"            on public.websites;
 drop policy if exists "Authenticated users can insert websites"   on public.websites;
 drop policy if exists "Owners can update their websites"          on public.websites;
 drop policy if exists "Owners can delete their websites"          on public.websites;
 
-create policy "Anyone can view websites" on public.websites
-  for select using (true);
+create policy "Owners can view their websites" on public.websites
+  for select using (auth.uid() = user_id);
 create policy "Authenticated users can insert websites" on public.websites
   for insert with check (auth.uid() = user_id);
 create policy "Owners can update their websites" on public.websites
@@ -105,14 +108,15 @@ create policy "Owners can update their websites" on public.websites
 create policy "Owners can delete their websites" on public.websites
   for delete using (auth.uid() = user_id);
 
--- Guides policies
+-- Guides policies (owner-only for ALL operations)
 drop policy if exists "Anyone can view guides"                    on public.guides;
+drop policy if exists "Owners can view their guides"              on public.guides;
 drop policy if exists "Authenticated users can insert guides"     on public.guides;
 drop policy if exists "Owners can update their guides"            on public.guides;
 drop policy if exists "Owners can delete their guides"            on public.guides;
 
-create policy "Anyone can view guides" on public.guides
-  for select using (true);
+create policy "Owners can view their guides" on public.guides
+  for select using (auth.uid() = user_id);
 create policy "Authenticated users can insert guides" on public.guides
   for insert with check (auth.uid() = user_id);
 create policy "Owners can update their guides" on public.guides
@@ -137,14 +141,15 @@ create policy "Owners can update their course notes" on public.course_notes
 create policy "Owners can delete their course notes" on public.course_notes
   for delete using (auth.uid() = user_id);
 
--- Wishlist policies
+-- Wishlist policies (owner-only for ALL operations)
 drop policy if exists "Anyone can view wishlist"                  on public.wishlist;
+drop policy if exists "Owners can view their wishlist"            on public.wishlist;
 drop policy if exists "Authenticated users can insert wishlist"   on public.wishlist;
 drop policy if exists "Owners can update their wishlist"          on public.wishlist;
 drop policy if exists "Owners can delete their wishlist"          on public.wishlist;
 
-create policy "Anyone can view wishlist" on public.wishlist
-  for select using (true);
+create policy "Owners can view their wishlist" on public.wishlist
+  for select using (auth.uid() = user_id);
 create policy "Authenticated users can insert wishlist" on public.wishlist
   for insert with check (auth.uid() = user_id);
 create policy "Owners can update their wishlist" on public.wishlist

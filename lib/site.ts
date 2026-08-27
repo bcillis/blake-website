@@ -33,13 +33,14 @@ export const AI_CRAWLER_USER_AGENTS = [
   "Applebot-Extended",
 ];
 
-/** Static routes, used by the sitemap and llms.txt. */
+/**
+ * Public static routes — used by the sitemap and llms.txt. Websites,
+ * Guides, and Wishlist are owner-only (RLS-gated) and intentionally
+ * omitted so we don't advertise pages that anonymous crawlers can't read.
+ */
 export const STATIC_ROUTES = [
   { path: "/", label: "Home", priority: 1.0 },
-  { path: "/websites", label: "Websites", priority: 0.8 },
   { path: "/journey", label: "Journey", priority: 0.8 },
-  { path: "/guides", label: "Guides", priority: 0.8 },
-  { path: "/wishlist", label: "Wishlist", priority: 0.5 },
   { path: "/privacy", label: "Privacy", priority: 0.2 },
   { path: "/terms", label: "Terms", priority: 0.2 },
 ] as const;
