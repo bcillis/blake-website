@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "./AuthProvider";
 import ThemeToggle from "./ThemeToggle";
+import PushLink from "./PushLink";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -37,13 +38,13 @@ export default function Navbar() {
 
   return (
     <header
-      className={`sticky top-0 z-50 bg-[var(--bg)] transition-colors duration-150 ${
+      className={`site-navbar sticky top-0 z-50 bg-[var(--bg)] transition-colors duration-150 ${
         scrolled ? "border-b border-[var(--rule)]" : "border-b border-transparent"
       }`}
     >
       <div className="max-w-page mx-auto px-6">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="group flex items-baseline gap-2.5">
+          <PushLink href="/" className="group flex items-baseline gap-2.5">
             {/* Flat monogram — the gradient tile is gone, the mark is not. */}
             <span
               aria-hidden="true"
@@ -55,13 +56,13 @@ export default function Navbar() {
             <span className="font-serif text-lg tracking-tight text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">
               BlakeHub
             </span>
-          </Link>
+          </PushLink>
 
           <nav aria-label="Main" className="hidden md:flex items-center gap-1">
             {visibleNavLinks.map((link) => {
               const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
               return (
-                <Link
+                <PushLink
                   key={link.href}
                   href={link.href}
                   aria-current={active ? "page" : undefined}
@@ -72,7 +73,7 @@ export default function Navbar() {
                   }`}
                 >
                   {link.label}
-                </Link>
+                </PushLink>
               );
             })}
             <span aria-hidden="true" className="mx-2 h-4 w-px bg-[var(--rule)]" />
@@ -133,7 +134,7 @@ export default function Navbar() {
                 const active =
                   link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
                 return (
-                  <Link
+                  <PushLink
                     key={link.href}
                     href={link.href}
                     aria-current={active ? "page" : undefined}
@@ -142,7 +143,7 @@ export default function Navbar() {
                     }`}
                   >
                     {link.label}
-                  </Link>
+                  </PushLink>
                 );
               })}
               {loading ? null : user ? (

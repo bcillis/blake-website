@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { createClient, WishlistItem } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import CardGrid from "@/components/CardGrid";
-import EntryCard from "@/components/EntryCard";
+import LinkCard from "@/components/LinkCard";
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(price);
@@ -362,11 +362,14 @@ export default function WishlistPage() {
       {loading ? (
         <CardGrid>
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="entry-card" aria-busy="true">
-              <div className="entry-card-image skeleton" />
-              <div className="entry-card-body">
-                <div className="skeleton h-4 w-2/3" />
-                <div className="skeleton h-3 w-1/2 mt-2" />
+            <div key={i} className="link-card" aria-busy="true">
+              <div className="skeleton" style={{ aspectRatio: "3 / 2", borderRadius: "7px" }} />
+              <div className="link-card-data">
+                <div className="skeleton" style={{ width: "2.25em", height: "2.25em", borderRadius: "5px" }} />
+                <div style={{ flex: 1 }}>
+                  <div className="skeleton h-3 w-2/3" />
+                  <div className="skeleton h-2 w-1/2 mt-1" />
+                </div>
               </div>
             </div>
           ))}
@@ -466,24 +469,14 @@ export default function WishlistPage() {
                   </div>
                 </form>
               ) : (
-                <EntryCard
+                <LinkCard
                   key={item.id}
                   title={item.title}
                   href={item.link}
                   imagePath={item.image_path}
-                  body={<p className="entry-card-price">{formatPrice(Number(item.price))}</p>}
-                  ownerControls={
-                    user ? (
-                      <>
-                        <button onClick={() => startEdit(item)}>
-                          edit<span className="sr-only"> {item.title}</span>
-                        </button>
-                        <button onClick={() => handleDelete(item.id)}>
-                          del<span className="sr-only"> {item.title}</span>
-                        </button>
-                      </>
-                    ) : undefined
-                  }
+                  middle={formatPrice(Number(item.price))}
+                  onEdit={user ? () => startEdit(item) : undefined}
+                  onDelete={user ? () => handleDelete(item.id) : undefined}
                 />
               )
             )}

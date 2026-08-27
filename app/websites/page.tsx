@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { createClient, Website } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import CardGrid from "@/components/CardGrid";
-import EntryCard from "@/components/EntryCard";
+import LinkCard from "@/components/LinkCard";
 
 export default function WebsitesPage() {
   const { user } = useAuth();
@@ -312,11 +312,14 @@ export default function WebsitesPage() {
       {loading ? (
         <CardGrid>
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="entry-card" aria-busy="true">
-              <div className="entry-card-image skeleton" />
-              <div className="entry-card-body">
-                <div className="skeleton h-4 w-2/3" />
-                <div className="skeleton h-3 w-1/2 mt-2" />
+            <div key={i} className="link-card" aria-busy="true">
+              <div className="skeleton" style={{ aspectRatio: "3 / 2", borderRadius: "7px" }} />
+              <div className="link-card-data">
+                <div className="skeleton" style={{ width: "2.25em", height: "2.25em", borderRadius: "5px" }} />
+                <div style={{ flex: 1 }}>
+                  <div className="skeleton h-3 w-2/3" />
+                  <div className="skeleton h-2 w-1/2 mt-1" />
+                </div>
               </div>
             </div>
           ))}
@@ -401,24 +404,15 @@ export default function WebsitesPage() {
                 </div>
               </form>
             ) : (
-              <EntryCard
+              <LinkCard
                 key={website.id}
                 title={website.title}
                 href={website.url}
                 imagePath={website.image_path}
-                body={<p className="entry-card-desc">{website.description}</p>}
-                ownerControls={
-                  user ? (
-                    <>
-                      <button onClick={() => startEdit(website)}>
-                        edit<span className="sr-only"> {website.title}</span>
-                      </button>
-                      <button onClick={() => handleDelete(website.id)}>
-                        del<span className="sr-only"> {website.title}</span>
-                      </button>
-                    </>
-                  ) : undefined
-                }
+                middle="Visit"
+                subtitle={website.description}
+                onEdit={user ? () => startEdit(website) : undefined}
+                onDelete={user ? () => handleDelete(website.id) : undefined}
               />
             )
           )}

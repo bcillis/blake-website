@@ -3,6 +3,14 @@
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
+/** View Transitions API circular reveal: on click, stash the pointer
+ *  coordinates in CSS custom properties, then swap the theme inside
+ *  document.startViewTransition so the ::view-transition-new(root)
+ *  keyframes in globals.css can clip-path from that point. */
+type DocumentWithVT = Document & {
+  startViewTransition?: (cb: () => void) => { finished: Promise<void> };
+};
+
 export default function ThemeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -14,9 +22,36 @@ export default function ThemeToggle() {
 
   const isDark = (theme === "system" ? resolvedTheme : theme) === "dark";
 
+  const handleToggle = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const next = isDark ? "light" : "dark";
+    const doc = document as DocumentWithVT;
+
+    // Anchor the reveal at the button's centre — that's what the user
+    // clicked, and centre-of-button reads better than raw click point
+    // for keyboard activations (which have clientX/Y = 0).
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    document.documentElement.style.setProperty("--reveal-x", `${x}px`);
+    document.documentElement.style.setProperty("--reveal-y", `${y}px`);
+
+    if (!doc.startViewTransition) {
+      setTheme(next);
+      return;
+    }
+    // .vt-theme scopes the circular-reveal CSS so it only runs during
+    // theme toggles, not page navigations (which reuse the same
+    // ::view-transition-* pseudos).
+    document.documentElement.classList.add("vt-theme");
+    const t = doc.startViewTransition(() => setTheme(next));
+    t.finished.finally(() => {
+      document.documentElement.classList.remove("vt-theme");
+    });
+  };
+
   return (
     <button
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={handleToggle}
       aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
       className="inline-flex h-9 w-9 items-center justify-center text-[var(--ink-3)] hover:text-[var(--accent)] transition-colors"
     >

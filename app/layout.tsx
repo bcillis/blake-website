@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Lora, DM_Mono } from "next/font/google";
+import { Lora, DM_Mono, Inter } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import ThemeProvider from "@/components/ThemeProvider";
@@ -27,6 +27,15 @@ const dmMono = DM_Mono({
   weight: ["300", "400", "500"],
   style: ["normal", "italic"],
   variable: "--font-dm-mono",
+  display: "swap",
+});
+
+// Inter carries the hero display type only (.display class in globals.css).
+// The rest of the site stays on Lora for prose and DM Mono for data.
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -92,7 +101,7 @@ const jsonLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${lora.variable} ${dmMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${lora.variable} ${dmMono.variable} ${inter.variable}`}>
       <body className="antialiased min-h-screen flex flex-col">
         <script
           type="application/ld+json"
