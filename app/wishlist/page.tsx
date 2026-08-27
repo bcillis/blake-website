@@ -153,6 +153,7 @@ export default function WishlistPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this wishlist item?")) return;
+    const target = items.find((i) => i.id === id);
     const supabase = createClient();
     const { error } = await supabase.from("wishlist").delete().eq("id", id);
     if (error) {
@@ -161,6 +162,7 @@ export default function WishlistPage() {
     }
     setFormError(null);
     setItems(items.filter((i) => i.id !== id));
+    if (target?.image_path) await removeStoredImage(target.image_path);
   };
 
   const startEdit = (item: WishlistItem) => {

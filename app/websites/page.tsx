@@ -122,6 +122,7 @@ export default function WebsitesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this website?")) return;
+    const target = websites.find((w) => w.id === id);
     const supabase = createClient();
     const { error } = await supabase.from("websites").delete().eq("id", id);
     if (error) {
@@ -130,6 +131,7 @@ export default function WebsitesPage() {
     }
     setActionError(null);
     setWebsites(websites.filter((w) => w.id !== id));
+    if (target?.image_path) await removeStoredImage(target.image_path);
   };
 
   const startEdit = (w: Website) => {
