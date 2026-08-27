@@ -13,10 +13,21 @@ export default function WebsitesPage() {
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ title: "", description: "", url: "" });
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    url: "",
+    imagePath: null as string | null,
+  });
   const [submitting, setSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState({ title: "", description: "", url: "" });
+  const [editData, setEditData] = useState({
+    title: "",
+    description: "",
+    url: "",
+    imagePath: null as string | null,
+  });
+  const [addRowId, setAddRowId] = useState<string>(() => crypto.randomUUID());
 
   useEffect(() => {
     fetchWebsites();
@@ -43,6 +54,38 @@ export default function WebsitesPage() {
     );
   }, [websites, search]);
 
+  const uploadPastedImage = async (
+    file: File,
+    rowId: string
+  ): Promise<string | null> => {
+    if (!user) return null;
+    const supabase = createClient();
+    const ext = (file.name.split(".").pop() || file.type.split("/")[1] || "png").toLowerCase();
+    const path = `${user.id}/websites/${rowId}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage
+      .from("entry-images")
+      .upload(path, file, { upsert: false });
+    if (error) {
+      setActionError(`Couldn't upload image: ${error.message}`);
+      return null;
+    }
+    return path;
+  };
+
+  const removeStoredImage = async (path: string) => {
+    const supabase = createClient();
+    await supabase.storage.from("entry-images").remove([path]);
+  };
+
+  const extractImageFromPaste = (e: React.ClipboardEvent): File | null => {
+    for (const item of Array.from(e.clipboardData.items)) {
+      if (item.kind === "file" && item.type.startsWith("image/")) {
+        return item.getAsFile();
+      }
+    }
+    return null;
+  };
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -52,9 +95,11 @@ export default function WebsitesPage() {
       .from("websites")
       .insert([
         {
+          id: addRowId,
           title: formData.title,
           description: formData.description,
           url: formData.url,
+          image_path: formData.imagePath,
           user_id: user.id,
         },
       ])
@@ -68,7 +113,8 @@ export default function WebsitesPage() {
     if (data) {
       setActionError(null);
       setWebsites([data, ...websites]);
-      setFormData({ title: "", description: "", url: "" });
+      setFormData({ title: "", description: "", url: "", imagePath: null });
+      setAddRowId(crypto.randomUUID());
       setShowForm(false);
     }
     setSubmitting(false);
@@ -88,16 +134,29 @@ export default function WebsitesPage() {
 
   const startEdit = (w: Website) => {
     setEditingId(w.id);
-    setEditData({ title: w.title, description: w.description, url: w.url });
+    setEditData({
+      title: w.title,
+      description: w.description,
+      url: w.url,
+      imagePath: w.image_path,
+    });
   };
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingId) return;
+    const original = websites.find((w) => w.id === editingId);
+    const previousImage = original?.image_path ?? null;
+
     const supabase = createClient();
     const { data, error } = await supabase
       .from("websites")
-      .update({ title: editData.title, description: editData.description, url: editData.url })
+      .update({
+        title: editData.title,
+        description: editData.description,
+        url: editData.url,
+        image_path: editData.imagePath,
+      })
       .eq("id", editingId)
       .select()
       .single();
@@ -109,6 +168,12 @@ export default function WebsitesPage() {
       setActionError(null);
       setWebsites(websites.map((w) => (w.id === editingId ? data : w)));
       setEditingId(null);
+
+      // Best-effort cleanup: if the image changed (including cleared),
+      // delete the old storage object. Don't block or roll back on failure.
+      if (previousImage && previousImage !== data.image_path) {
+        await removeStoredImage(previousImage);
+      }
     }
   };
 
@@ -155,9 +220,42 @@ export default function WebsitesPage() {
           <div>
             <form
               onSubmit={handleAdd}
+              onPaste={async (e) => {
+                const file = extractImageFromPaste(e);
+                if (!file) return;
+                e.preventDefault();
+                const path = await uploadPastedImage(file, addRowId);
+                if (path) setFormData((f) => ({ ...f, imagePath: path }));
+              }}
               className="mb-6 border border-[var(--rule-strong)] bg-[var(--surface)] p-5 space-y-3"
             >
               <p className="meta">New entry</p>
+              <div className="flex items-center gap-3 border border-dashed border-[var(--rule)] p-3">
+                {formData.imagePath ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={createClient().storage.from("entry-images").getPublicUrl(formData.imagePath).data.publicUrl}
+                      alt=""
+                      className="w-16 h-12 object-cover border border-[var(--rule)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (formData.imagePath) await removeStoredImage(formData.imagePath);
+                        setFormData((f) => ({ ...f, imagePath: null }));
+                      }}
+                      className="btn-bare"
+                    >
+                      Remove image
+                    </button>
+                  </>
+                ) : (
+                  <p className="text-xs text-[var(--ink-3)]">
+                    Optional — paste an image (Ctrl+V) to replace the favicon.
+                  </p>
+                )}
+              </div>
               <input
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -185,7 +283,16 @@ export default function WebsitesPage() {
                 <button type="submit" disabled={submitting} className="btn">
                   {submitting ? "Adding…" : "Add"}
                 </button>
-                <button type="button" onClick={() => setShowForm(false)} className="btn-quiet">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (formData.imagePath) await removeStoredImage(formData.imagePath);
+                    setFormData({ title: "", description: "", url: "", imagePath: null });
+                    setAddRowId(crypto.randomUUID());
+                    setShowForm(false);
+                  }}
+                  className="btn-quiet"
+                >
                   Cancel
                 </button>
               </div>
@@ -223,9 +330,42 @@ export default function WebsitesPage() {
               <form
                 key={website.id}
                 onSubmit={handleEdit}
+                onPaste={async (e) => {
+                  const file = extractImageFromPaste(e);
+                  if (!file) return;
+                  e.preventDefault();
+                  const path = await uploadPastedImage(file, website.id);
+                  if (path) setEditData((d) => ({ ...d, imagePath: path }));
+                }}
                 className="border border-[var(--rule-strong)] bg-[var(--surface)] p-3 space-y-2 col-span-full"
               >
                 <p className="meta">Editing</p>
+                <div className="flex items-center gap-3 border border-dashed border-[var(--rule)] p-3">
+                  {editData.imagePath ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={createClient().storage.from("entry-images").getPublicUrl(editData.imagePath).data.publicUrl}
+                        alt=""
+                        className="w-16 h-12 object-cover border border-[var(--rule)]"
+                      />
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (editData.imagePath) await removeStoredImage(editData.imagePath);
+                          setEditData((d) => ({ ...d, imagePath: null }));
+                        }}
+                        className="btn-bare"
+                      >
+                        Remove image
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-xs text-[var(--ink-3)]">
+                      Optional — paste an image (Ctrl+V) to replace the favicon.
+                    </p>
+                  )}
+                </div>
                 <input
                   value={editData.title}
                   onChange={(e) => setEditData({ ...editData, title: e.target.value })}
