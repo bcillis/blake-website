@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { createClient, WishlistItem } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
-import { hostFromUrl } from "@/lib/url";
+import CardGrid from "@/components/CardGrid";
+import EntryCard from "@/components/EntryCard";
 
 const formatPrice = (price: number) =>
   new Intl.NumberFormat("en-CA", { style: "currency", currency: "CAD" }).format(price);
@@ -139,7 +140,7 @@ export default function WishlistPage() {
   };
 
   return (
-    <div className="max-w-page mx-auto px-6 pb-24">
+    <div className="max-w-narrow mx-auto px-6 pb-24">
       <header className="pt-16 pb-10">
         <p className="meta mb-5">On my radar</p>
         <h1 className="page-title mb-5">Wishlist.</h1>
@@ -252,114 +253,104 @@ export default function WishlistPage() {
       )}
 
       {loading ? (
-        <div className="index" aria-busy="true">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="index-row">
-              <div className="h-5 skeleton w-1/3" />
+        <CardGrid>
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="entry-card" aria-busy="true">
+              <div className="entry-card-image skeleton" />
+              <div className="entry-card-body">
+                <div className="skeleton h-4 w-2/3" />
+                <div className="skeleton h-3 w-1/2 mt-2" />
+              </div>
             </div>
           ))}
-        </div>
+        </CardGrid>
       ) : sortedItems.length === 0 ? (
-        <div className="index">
-          <p className="py-16 text-[var(--ink-3)]">
-            {search ? `Nothing matches “${search}”.` : "Wishlist is empty."}
-          </p>
+        <div className="py-16 text-center text-[var(--ink-3)]">
+          {search ? <>Nothing matches &ldquo;{search}&rdquo;.</> : "Wishlist is empty."}
         </div>
       ) : (
         <>
-          <ul className="index">
-            {sortedItems.map((item) => (
-              <li key={item.id}>
-                {editingId === item.id ? (
-                  <form
-                    onSubmit={handleEdit}
-                    className="border-b border-[var(--rule)] py-5 space-y-3"
-                  >
-                    <p className="meta">Editing</p>
-                    <input
-                      value={editData.title}
-                      onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                      className="field"
-                      aria-label="Title"
-                      required
-                    />
-                    <input
-                      value={editData.price}
-                      onChange={(e) => setEditData({ ...editData, price: e.target.value })}
-                      className="field"
-                      aria-label="Price in CAD"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      required
-                    />
-                    <input
-                      value={editData.link}
-                      onChange={(e) => setEditData({ ...editData, link: e.target.value })}
-                      className="field"
-                      aria-label="Link"
-                      type="url"
-                      required
-                    />
-                    {formError && (
-                      <div role="alert" className="alert">
-                        {formError}
-                      </div>
-                    )}
-                    <div className="flex gap-2 pt-1">
-                      <button type="submit" className="btn">
-                        Save
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormError(null);
-                          setEditingId(null);
-                        }}
-                        className="btn-quiet"
-                      >
-                        Cancel
-                      </button>
+          <CardGrid>
+            {sortedItems.map((item) =>
+              editingId === item.id ? (
+                <form
+                  key={item.id}
+                  onSubmit={handleEdit}
+                  className="border border-[var(--rule-strong)] bg-[var(--surface)] p-3 space-y-2 col-span-full"
+                >
+                  <p className="meta">Editing</p>
+                  <input
+                    value={editData.title}
+                    onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                    className="field"
+                    aria-label="Title"
+                    required
+                  />
+                  <input
+                    value={editData.price}
+                    onChange={(e) => setEditData({ ...editData, price: e.target.value })}
+                    className="field"
+                    aria-label="Price in CAD"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                  />
+                  <input
+                    value={editData.link}
+                    onChange={(e) => setEditData({ ...editData, link: e.target.value })}
+                    className="field"
+                    aria-label="Link"
+                    type="url"
+                    required
+                  />
+                  {formError && (
+                    <div role="alert" className="alert">
+                      {formError}
                     </div>
-                  </form>
-                ) : (
-                  <article className="index-row group grid-cols-[1fr_auto] items-baseline">
-                    <div className="min-w-0">
-                      <h2 className="row-title">
-                        <a
-                          href={item.link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="stretched-link"
-                        >
-                          {item.title}
-                          <span className="sr-only"> (opens in a new tab)</span>
-                        </a>
-                      </h2>
-                      <p className="data mt-0.5 text-[var(--ink-3)]">{hostFromUrl(item.link)}</p>
-                      {user && (
-                        <div className="row-actions mt-2.5 flex items-center gap-4">
-                          <button onClick={() => startEdit(item)} className="btn-bare">
-                            Edit<span className="sr-only"> {item.title}</span>
-                          </button>
-                          <button onClick={() => handleDelete(item.id)} className="btn-bare">
-                            Delete<span className="sr-only"> {item.title}</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {/* Tabular figures so the column of prices aligns digit for digit. */}
-                    <span className="font-mono text-base tabular-nums text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors">
-                      {formatPrice(Number(item.price))}
-                    </span>
-                  </article>
-                )}
-              </li>
-            ))}
-          </ul>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <button type="submit" className="btn">
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormError(null);
+                        setEditingId(null);
+                      }}
+                      className="btn-quiet"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <EntryCard
+                  key={item.id}
+                  title={item.title}
+                  href={item.link}
+                  imagePath={item.image_path}
+                  body={<p className="entry-card-price">{formatPrice(Number(item.price))}</p>}
+                  ownerControls={
+                    user ? (
+                      <>
+                        <button onClick={() => startEdit(item)}>
+                          edit<span className="sr-only"> {item.title}</span>
+                        </button>
+                        <button onClick={() => handleDelete(item.id)}>
+                          del<span className="sr-only"> {item.title}</span>
+                        </button>
+                      </>
+                    ) : undefined
+                  }
+                />
+              )
+            )}
+          </CardGrid>
 
           {/* Ledger total */}
-          <div className="flex items-baseline justify-between gap-4 pt-4 border-t border-[var(--rule-strong)]">
+          <div className="flex items-baseline justify-between gap-4 pt-4 mt-6 border-t border-[var(--rule-strong)]">
             <span className="meta">
               {String(filteredItems.length).padStart(2, "0")}
               {search ? ` of ${items.length}` : ""} items
